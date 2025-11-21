@@ -18,12 +18,8 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-
     <html lang="en">
-      <body
-        className={`antialiased w-full h-screen`}
-      >
-
+      <body className={`antialiased w-full h-screen`}>
         <SidebarProvider>
           <div className="flex w-full">
             <AppSidebar />
@@ -33,7 +29,6 @@ export default function RootLayout({
                 {children}
               </main>
             </div>
-
           </div>
         </SidebarProvider>
 

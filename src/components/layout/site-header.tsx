@@ -1,9 +1,31 @@
+"use client";
+
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { SidebarTrigger } from '@/components/ui/sidebar'
-import { User } from 'lucide-react'
+import { User, LogOut } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { logout, getUserData } from '@/lib/actions/auth'
+import { useEffect, useState } from 'react'
 
 export function SiteHeader() {
+  const [userName, setUserName] = useState<string>('Usuário')
+
+  useEffect(() => {
+    async function loadUserData() {
+      const userData = await getUserData()
+      if (userData?.name) {
+        setUserName(userData.name)
+      }
+    }
+    loadUserData()
+  }, [])
+
   return (
     <header className="sticky top-0 z-50 flex h-14 bg-white shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-14">
       <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
@@ -14,17 +36,23 @@ export function SiteHeader() {
         />
         <h1 className="text-base font-medium"></h1>
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="ghost" asChild size="sm" className="hidden sm:flex">
-            <a
-              href="#"
-              rel="noopener noreferrer"
-              target="_blank"
-              className="dark:text-foreground"
-            >
-              <User/>
-              User Name
-            </a>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="hidden sm:flex">
+                <User/>
+                {userName}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={() => logout()}
+                className="cursor-pointer"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Sair
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </header>

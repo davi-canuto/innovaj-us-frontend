@@ -3,10 +3,14 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 async function request(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}${endpoint}`
 
+  // Pega o token do localStorage se existir
+  const token = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+
   const config: RequestInit = {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token && { "Authorization": `Bearer ${token}` }),
       ...options.headers,
     },
   }
