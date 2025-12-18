@@ -21,13 +21,6 @@ import {
 
 export const description = "A donut chart with text"
 
-const chartData = [
-  { browser: "emAndamento", visitors: 275, fill: "#e2e238" },
-  { browser: "finalizados", visitors: 200, fill: "#288f61" },
-  { browser: "cancelados", visitors: 287, fill: "#e28238" },
-
-]
-
 const chartConfig = {
   visitors: {
     label: "Precatorios",
@@ -46,10 +39,22 @@ const chartConfig = {
   },
 } satisfies ChartConfig
 
-export function DashboardChart() {
+interface DashboardChartProps {
+  emAndamento: number
+  finalizados: number
+  cancelados: number
+}
+
+export function DashboardChart({ emAndamento, finalizados, cancelados }: DashboardChartProps) {
+  const chartData = [
+    { browser: "emAndamento", visitors: emAndamento, fill: "#e2e238" },
+    { browser: "finalizados", visitors: finalizados, fill: "#288f61" },
+    { browser: "cancelados", visitors: cancelados, fill: "#e28238" },
+  ]
+
   const totalVisitors = React.useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
-  }, [])
+  }, [chartData])
 
   return (
     <Card className="flex flex-col border">

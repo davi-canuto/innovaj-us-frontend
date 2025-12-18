@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "./popover";
 
 interface DatePickerProps {
   selected?: Date;
-  onSelect?: (date: Date) => void;
+  onSelect?: (date: Date | undefined) => void;
 }
 
 export function DatePicker({ selected, onSelect }: DatePickerProps) {

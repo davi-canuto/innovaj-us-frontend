@@ -3,7 +3,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL
+const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
 
 export async function login(formData: FormData) {
   const email = formData.get('email') as string
@@ -36,10 +36,10 @@ export async function login(formData: FormData) {
       return { error: 'Token não recebido' }
     }
 
-    // Salva o token em um cookie HTTP-only
+    // Salva o token em um cookie acessível pelo client
     const cookieStore = await cookies()
     cookieStore.set('auth_token', token, {
-      httpOnly: true,
+      httpOnly: false, // Precisa ser false para client-side acessar
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       maxAge: 60 * 60 * 24, // 24 horas
@@ -100,34 +100,36 @@ export async function signup(formData: FormData) {
 
     const result = await response.json()
     const token = result.record?.token || result.token
+    const userData = result.record || result.user || result
 
-    if (token) {
-      // Salva o token em um cookie HTTP-only
-      const cookieStore = await cookies()
-      cookieStore.set('auth_token', token, {
+    if (!token) {
+      return { error: 'Token não recebido' }
+    }
+
+    // Salva o token em um cookie acessível pelo client
+    const cookieStore = await cookies()
+    cookieStore.set('auth_token', token, {
+      httpOnly: false, // Precisa ser false para client-side acessar
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24, // 24 horas
+      path: '/',
+    })
+
+    // Salva os dados do usuário
+    if (userData) {
+      const userInfo = {
+        name: userData.name,
+        email: userData.email,
+        id: userData.id,
+      }
+      cookieStore.set('user_data', JSON.stringify(userInfo), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         maxAge: 60 * 60 * 24, // 24 horas
         path: '/',
       })
-
-      // Salva os dados do usuário
-      const userData = result.record || result.user || result
-      if (userData) {
-        const userInfo = {
-          name: userData.name,
-          email: userData.email,
-          id: userData.id,
-        }
-        cookieStore.set('user_data', JSON.stringify(userInfo), {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === 'production',
-          sameSite: 'lax',
-          maxAge: 60 * 60 * 24, // 24 horas
-          path: '/',
-        })
-      }
     }
 
     return { success: true }

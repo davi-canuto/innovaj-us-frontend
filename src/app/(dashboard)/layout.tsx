@@ -12,29 +12,24 @@ export const metadata: Metadata = {
   description: "Dashboard layout with shadcn sidebar",
 }
 
-export default function RootLayout({
+export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`antialiased w-full h-screen`}>
-        <SidebarProvider>
-          <div className="flex w-full">
-            <AppSidebar />
-            <div className="flex w-full flex-col ">
-              <SiteHeader />
-              <main className="flex-1 p-6 space-y-6 ">
-                {children}
-              </main>
-            </div>
-          </div>
-        </SidebarProvider>
-
-        <Toaster richColors position="top-center" expand={false} />
-      </body>
-    </html>
+    <SidebarProvider>
+      <div className="flex w-full min-h-screen">
+        <AppSidebar />
+        <div className="flex w-full flex-col">
+          <SiteHeader />
+          <main className="flex-1 p-6 space-y-6 overflow-y-auto">
+            {children}
+          </main>
+        </div>
+      </div>
+      <Toaster richColors position="top-center" expand={false} />
+    </SidebarProvider>
   )
 }
 

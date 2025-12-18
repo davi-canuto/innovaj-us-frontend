@@ -23,45 +23,45 @@ const data = {
   navMain: [
     {
       title: "Precatórios",
-      url: "#",
+      url: "/precatory/list",
       icon: CircleDollarSign,
       isActive: true,
       items: [
         {
           title: "Cadastrar",
-          url: "#",
+          url: "/precatory/new",
         },
         {
           title: "Listar",
-          url: "#",
+          url: "/precatory/list",
         },
       ],
     },
     {
       title: "Credores",
-      url: "#",
+      url: "/claimant/list",
       icon: Users,
       items: [
         {
           title: "Cadastrar",
-          url: "#",
+          url: "/claimant/new",
         },
         {
           title: "Listar",
-          url: "#",
+          url: "/claimant/list",
         },
       ],
     },
     {
       title: "Devedores",
-      url: "#",
+      url: "/debtor",
       icon: Landmark
     },
     {
       title: "Relatorios",
-      url: "#",
+      url: "/dashboard",
       icon: FileText,
-      
+
     },
   ],
 }

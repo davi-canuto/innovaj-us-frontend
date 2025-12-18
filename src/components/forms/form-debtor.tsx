@@ -58,7 +58,7 @@ export default function FormDebtor() {
                     name="type"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Tipo do Credor:</FormLabel>
+                            <FormLabel>Tipo do Devedor:</FormLabel>
                             <Select
                                 onValueChange={(val) => {
                                     field.onChange(val);
@@ -149,8 +149,8 @@ export default function FormDebtor() {
                 />
             </div>
             <div className="w-full flex justify-end">
-                <Button type="submit" className="bg-[#1a384c] col-2 w-fit cursor-pointer py-2">
-                    Cadastrar Credor
+                <Button type="submit" className="bg-[#1a384c] col-2 w-fit cursor-pointer py-6 font-bold">
+                    Cadastrar Devedor
                 </Button>
             </div>
 

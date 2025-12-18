@@ -7,16 +7,10 @@ export default function LoginLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  console.log("LoginLayout renderizou")
-
   return (
-    <html lang="en">
-      <body
-        className={`antialiased w-full` }
-      >
-        {children}
-         <Toaster richColors position="top-center" expand={false}/>
-      </body>
-    </html>
+    <div className="min-h-screen flex items-center justify-center">
+      {children}
+      <Toaster richColors position="top-center" expand={false}/>
+    </div>
   );
 }

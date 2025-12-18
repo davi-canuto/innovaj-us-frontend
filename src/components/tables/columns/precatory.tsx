@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 
 export const columnsPrecatory: ColumnDef<Precatory>[] = [
   {
@@ -43,7 +44,31 @@ export const columnsPrecatory: ColumnDef<Precatory>[] = [
       const precatory = row.original
       const handleDelete = async () => {
         if (confirm(`Deseja deletar ${precatory.name}?`)) {
-          await fetch(`/api/precatories/${precatory.id}`, { method: "DELETE" })
+          try {
+            const response = await fetch(`/api/precatories/${precatory.id}`, {
+              method: "DELETE",
+              credentials: 'include'
+            })
+
+            if (!response.ok) {
+              if (response.status === 401) {
+                toast.error("Sessão expirada. Faça login novamente.")
+                setTimeout(() => {
+                  window.location.href = '/login'
+                }, 1500)
+                return
+              }
+
+              const error = await response.json().catch(() => ({ message: "Erro ao deletar" }))
+              toast.error(error.message || "Erro ao deletar precatório")
+              return
+            }
+
+            toast.success("Precatório deletado com sucesso")
+            window.location.reload()
+          } catch (error) {
+            toast.error("Erro ao deletar precatório. Tente novamente.")
+          }
         }
       }
 

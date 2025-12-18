@@ -28,6 +28,7 @@ export default function FormLogin() {
         toast.error(result.error);
       } else {
         toast.success("Login realizado com sucesso!");
+        router.refresh();
         router.push("/dashboard");
       }
     } catch (error) {

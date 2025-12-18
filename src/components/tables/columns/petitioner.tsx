@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toast } from "sonner"
 
 export const columnsPetitioner: ColumnDef<Petitioner>[] = [
 
@@ -45,7 +46,32 @@ export const columnsPetitioner: ColumnDef<Petitioner>[] = [
       const petitioner = row.original
       const handleDelete = async () => {
         if (confirm(`Deseja deletar ${petitioner.name}?`)) {
-          await fetch(`/api/petitioners/${petitioner.id}`, { method: "DELETE" })        }
+          try {
+            const response = await fetch(`/api/petitioners/${petitioner.id}`, {
+              method: "DELETE",
+              credentials: 'include'
+            })
+
+            if (!response.ok) {
+              if (response.status === 401) {
+                toast.error("Sessão expirada. Faça login novamente.")
+                setTimeout(() => {
+                  window.location.href = '/login'
+                }, 1500)
+                return
+              }
+
+              const error = await response.json().catch(() => ({ message: "Erro ao deletar" }))
+              toast.error(error.message || "Erro ao deletar requerente")
+              return
+            }
+
+            toast.success("Requerente deletado com sucesso")
+            window.location.reload()
+          } catch (error) {
+            toast.error("Erro ao deletar requerente. Tente novamente.")
+          }
+        }
       }
 
       return (

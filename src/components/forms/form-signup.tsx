@@ -35,9 +35,11 @@ export default function FormSignup() {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Conta criada com sucesso!");
-        router.push("/dashboard");
+        toast.success("Conta criada com sucesso! Redirecionando...");
+        
+        await new Promise(resolve => setTimeout(resolve, 500));
         router.refresh();
+        router.push("/dashboard");
       }
     } catch (error) {
       toast.error("Erro ao criar conta. Tente novamente.");
@@ -60,7 +62,6 @@ export default function FormSignup() {
       <h2 className="text-2xl font-bold text-[#1a384c]">Criar Conta</h2>
 
       <form onSubmit={handleSubmit} className="space-y-6 w-full max-w-md mx-auto">
-        {/* Campo de nome */}
         <div className="space-y-2">
           <Label htmlFor="name" className="text-sm font-bold text-[1rem]">
             Nome Completo

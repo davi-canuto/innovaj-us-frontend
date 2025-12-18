@@ -1,20 +1,20 @@
-import { columnsPetitioner } from "@/components/tables/columns/petitioner"
+import { columnsPrecatory } from "@/components/tables/columns/precatory"
 import { DataTable } from "@/components/tables/dataTable"
 import {
   List,
 } from "lucide-react"
-import { Petitioner } from "@/utils/types"
-import FormPetitioner from "@/components/forms/form-petitioner"
-import { AppDialog } from "@/components/layout/app-dialog"
+import { Precatory } from "@/utils/types"
 import { getToken } from "@/lib/actions/auth"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
 
-async function getData(): Promise<Petitioner[]> {
+async function getData(): Promise<Precatory[]> {
   try {
     const token = await getToken()
 
-    const response = await fetch(`${API_URL}/petitioners`, {
+    const response = await fetch(`${API_URL}/precatories`, {
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
@@ -23,19 +23,19 @@ async function getData(): Promise<Petitioner[]> {
     })
 
     if (!response.ok) {
-      console.error('Failed to fetch petitioners:', response.status)
+      console.error('Failed to fetch precatories:', response.status)
       return []
     }
 
     return response.json()
   } catch (error) {
-    console.error('Error fetching petitioners:', error)
+    console.error('Error fetching precatories:', error)
     return []
   }
 }
 
 
-export default async function ListPetitioners() {
+export default async function ListPrecatory() {
   const data = await getData()
 
   return (
@@ -45,18 +45,21 @@ export default async function ListPetitioners() {
           <div className=" flex items-center justify-between  mb-6  "  >
             <div className="text-3xl font-semibold flex items-center space-x-2">
                <List strokeWidth={3} className=" text-[#248A61] " />
-            <h1 className=" text-[#1a384c]"> Credores</h1>
+            <h1 className=" text-[#1a384c]"> Precatórios</h1>
             </div>
-              <AppDialog
-        title="Novo Credor"
-        trigger="Novo Credor"
-        content={<FormPetitioner />}
-      />
+            <Link href="/precatory/new">
+              <Button className="bg-[#1a384c] text-white hover:bg-[#1a384c]">
+                Novo Precatório
+              </Button>
+            </Link>
           </div>
           <hr />
-          <DataTable columns={columnsPetitioner} data={data} />
+          <DataTable columns={columnsPrecatory} data={data} />
         </section>
       </div>
+
+
+
     </>
   )
 }
