@@ -19,25 +19,84 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { maskCNPJ, maskCPF, maskPhone } from "@/utils/masks";
 import { Separator } from "../ui/separator";
+import { petitionersService } from "@/services/petitioners";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
+
+// Validação de CPF (apenas formato, não dígitos verificadores)
+const isValidCPF = (cpf: string) => {
+  const numbers = cpf.replace(/\D/g, "");
+  return numbers.length === 11;
+};
+
+// Validação de CNPJ (apenas formato)
+const isValidCNPJ = (cnpj: string) => {
+  const numbers = cnpj.replace(/\D/g, "");
+  return numbers.length === 14;
+};
 
 const FormSchema = z.object({
   person_type: z.enum(["PF", "PJ"]),
-  name: z.string().optional(),
-  registration_number: z.string(),
-  birth_date: z.date().optional(),
-  death_date: z.date().optional(),
+  name: z.string().min(3, "Nome deve ter no mínimo 3 caracteres").optional(),
+  registration_number: z.string().min(1, "Campo obrigatório"),
+  birth_date: z.date().optional().nullable(),
+  death_date: z.date().optional().nullable(),
   deceased: z.boolean().optional(),
-  company_name: z.string().optional(),
-  foundation_date: z.date().optional(),
-  code: z.string(),
-  phone: z.string(),
-  email: z.string(),
+  company_name: z.string().min(3, "Razão social deve ter no mínimo 3 caracteres").optional(),
+  foundation_date: z.date().optional().nullable(),
+  phone: z.string().optional(),
+  email: z.string().email("E-mail inválido").optional().or(z.literal("")),
+}).refine((data) => {
+  if (data.person_type === "PF") {
+    return data.name && data.name.length >= 3;
+  }
+  return true;
+}, {
+  message: "Nome é obrigatório para Pessoa Física",
+  path: ["name"],
+}).refine((data) => {
+  if (data.person_type === "PJ") {
+    return data.company_name && data.company_name.length >= 3;
+  }
+  return true;
+}, {
+  message: "Razão Social é obrigatória para Pessoa Jurídica",
+  path: ["company_name"],
+}).refine((data) => {
+  if (data.person_type === "PF") {
+    return isValidCPF(data.registration_number);
+  }
+  return true;
+}, {
+  message: "CPF inválido (deve conter 11 dígitos)",
+  path: ["registration_number"],
+}).refine((data) => {
+  if (data.person_type === "PJ") {
+    return isValidCNPJ(data.registration_number);
+  }
+  return true;
+}, {
+  message: "CNPJ inválido (deve conter 14 dígitos)",
+  path: ["registration_number"],
+}).refine((data) => {
+  if (data.deceased && !data.death_date) {
+    return false;
+  }
+  return true;
+}, {
+  message: "Data do óbito é obrigatória quando marcado como falecido",
+  path: ["death_date"],
 });
 
 type FormValues = z.infer<typeof FormSchema>;
 
-export default function FormPetitioner() {
+interface FormPetitionerProps {
+  onSuccess?: () => void;
+}
+
+export default function FormPetitioner({ onSuccess }: FormPetitionerProps) {
   const [personType, setPersonType] = useState<"PF" | "PJ">("PF");
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
@@ -45,19 +104,44 @@ export default function FormPetitioner() {
       person_type: "PF",
       name: "",
       registration_number: "",
-      birth_date: new Date(),
-      death_date: new Date(),
+      birth_date: null,
+      death_date: null,
+      deceased: false,
       company_name: "",
-      foundation_date: new Date(),
-      code: "",
+      foundation_date: null,
       phone: "",
       email: ""
     }
   });
 
-  function onSubmit(data: FormValues) {
-    console.log("Form data:", data);
-    
+  async function onSubmit(data: FormValues) {
+    setIsLoading(true);
+
+    try {
+      const payload = {
+        person_type: data.person_type.toLowerCase() as 'pf' | 'pj',
+        name: data.person_type === "PF" ? data.name : undefined,
+        company_name: data.person_type === "PJ" ? data.company_name : undefined,
+        registration_number: data.registration_number.replace(/\D/g, ""),
+        birth_date: data.birth_date?.toISOString().split('T')[0],
+        death_date: data.deceased ? data.death_date?.toISOString().split('T')[0] : undefined,
+        foundation_date: data.foundation_date?.toISOString().split('T')[0],
+        phone: data.phone?.replace(/\D/g, "") || undefined,
+        email: data.email || undefined,
+      };
+
+      await petitionersService.create(payload);
+
+      toast.success("Credor cadastrado com sucesso!");
+      form.reset();
+      setPersonType("PF");
+      onSuccess?.();
+    } catch (error) {
+      // Erro já é tratado pelo api.ts com toast
+      console.error("Erro ao cadastrar credor:", error);
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
@@ -69,11 +153,12 @@ export default function FormPetitioner() {
           name="person_type"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tipo do Credor:</FormLabel>
+              <FormLabel>Tipo do Credor *</FormLabel>
               <Select
                 onValueChange={(val) => {
                   field.onChange(val);
-                  setPersonType(val as any);
+                  setPersonType(val as "PF" | "PJ");
+                  form.setValue("registration_number", "");
                 }}
                 value={field.value}
               >
@@ -81,7 +166,7 @@ export default function FormPetitioner() {
                   <SelectValue placeholder="Selecione o Tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="PF">Pessoa Física </SelectItem>
+                  <SelectItem value="PF">Pessoa Física</SelectItem>
                   <SelectItem value="PJ">Pessoa Jurídica</SelectItem>
                 </SelectContent>
               </Select>
@@ -97,7 +182,7 @@ export default function FormPetitioner() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
+                    <FormLabel>Nome *</FormLabel>
                     <FormControl>
                       <Input placeholder="João Silva" {...field} />
                     </FormControl>
@@ -111,9 +196,14 @@ export default function FormPetitioner() {
                 name="registration_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CPF</FormLabel>
+                    <FormLabel>CPF *</FormLabel>
                     <FormControl>
-                      <Input placeholder="000.000.000-00" {...field} onChange={(e) => field.onChange(maskCPF(e.target.value))} />
+                      <Input
+                        placeholder="000.000.000-00"
+                        maxLength={14}
+                        {...field}
+                        onChange={(e) => field.onChange(maskCPF(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -121,7 +211,7 @@ export default function FormPetitioner() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <FormField
                 control={form.control}
                 name="birth_date"
@@ -129,19 +219,19 @@ export default function FormPetitioner() {
                   <FormItem>
                     <FormLabel>Data de nascimento</FormLabel>
                     <FormControl>
-                      <DatePicker selected={field.value} onSelect={field.onChange} />
+                      <DatePicker selected={field.value ?? undefined} onSelect={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-             
+
               <FormField
                 control={form.control}
                 name="deceased"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between">
-                    <FormLabel>Óbito?</FormLabel>
+                  <FormItem className="flex flex-col gap-2">
+                    <FormLabel>Falecido?</FormLabel>
                     <FormControl>
                       <Switch checked={field.value || false} onCheckedChange={field.onChange} />
                     </FormControl>
@@ -156,9 +246,9 @@ export default function FormPetitioner() {
                   name="death_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Data do óbito</FormLabel>
+                      <FormLabel>Data do óbito *</FormLabel>
                       <FormControl>
-                        <DatePicker selected={field.value} onSelect={field.onChange} />
+                        <DatePicker selected={field.value ?? undefined} onSelect={field.onChange} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -166,21 +256,19 @@ export default function FormPetitioner() {
                 />
               )}
             </div>
-
           </>
         )}
 
         {personType === "PJ" && (
           <>
-
             <FormField
               control={form.control}
               name="company_name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Razão Social</FormLabel>
+                  <FormLabel>Razão Social *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Exemplo LDTA"  {...field} />
+                    <Input placeholder="Empresa Exemplo LTDA" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -192,9 +280,14 @@ export default function FormPetitioner() {
                 name="registration_number"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>CNPJ</FormLabel>
+                    <FormLabel>CNPJ *</FormLabel>
                     <FormControl>
-                      <Input placeholder="00.000.000/0000-00"  {...field} onChange={(e) => field.onChange(maskCNPJ(e.target.value))} />
+                      <Input
+                        placeholder="00.000.000/0000-00"
+                        maxLength={18}
+                        {...field}
+                        onChange={(e) => field.onChange(maskCNPJ(e.target.value))}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -207,14 +300,13 @@ export default function FormPetitioner() {
                   <FormItem>
                     <FormLabel>Data de fundação</FormLabel>
                     <FormControl>
-                      <DatePicker selected={field.value} onSelect={field.onChange} />
+                      <DatePicker selected={field.value ?? undefined} onSelect={field.onChange} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
-
           </>
         )}
 
@@ -226,7 +318,12 @@ export default function FormPetitioner() {
               <FormItem>
                 <FormLabel>Telefone</FormLabel>
                 <FormControl>
-                  <Input placeholder="(DDD) 99999-9999" {...field} onChange={(e) => field.onChange(maskPhone(e.target.value))} />
+                  <Input
+                    placeholder="(00) 00000-0000"
+                    maxLength={15}
+                    {...field}
+                    onChange={(e) => field.onChange(maskPhone(e.target.value))}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -247,14 +344,24 @@ export default function FormPetitioner() {
             )}
           />
         </div>
-        <Separator></Separator>
-        
+        <Separator />
+
         <div className="w-full flex justify-end">
-          <Button type="submit" className="bg-[#1a384c] col-2 w-fit cursor-pointer py-6 font-bold">
-            Cadastrar Credor
+          <Button
+            type="submit"
+            disabled={isLoading}
+            className="bg-[#1a384c] w-fit cursor-pointer py-6 font-bold"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Cadastrando...
+              </>
+            ) : (
+              "Cadastrar Credor"
+            )}
           </Button>
         </div>
-
       </form>
     </Form>
   );
