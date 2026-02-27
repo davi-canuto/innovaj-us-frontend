@@ -92,26 +92,42 @@ type FormValues = z.infer<typeof FormSchema>;
 
 interface FormPetitionerProps {
   onSuccess?: () => void;
+  defaultValues?: {
+    id?: number;
+    person_type?: string;
+    name?: string;
+    registration_number?: string;
+    birth_date?: string | null;
+    death_date?: string | null;
+    company_name?: string | null;
+    phone?: string;
+    email?: string;
+  };
 }
 
-export default function FormPetitioner({ onSuccess }: FormPetitionerProps) {
-  const [personType, setPersonType] = useState<"PF" | "PJ">("PF");
+export default function FormPetitioner({ onSuccess, defaultValues }: FormPetitionerProps) {
+  const initialType = (defaultValues?.person_type?.toUpperCase() as "PF" | "PJ") ?? "PF";
+  const [personType, setPersonType] = useState<"PF" | "PJ">(initialType);
   const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(FormSchema),
     defaultValues: {
-      person_type: "PF",
-      name: "",
-      registration_number: "",
-      birth_date: null,
-      death_date: null,
-      deceased: false,
-      company_name: "",
+      person_type: initialType,
+      name: defaultValues?.name ?? "",
+      registration_number: defaultValues?.registration_number
+        ? initialType === "PF"
+          ? maskCPF(defaultValues.registration_number)
+          : maskCNPJ(defaultValues.registration_number)
+        : "",
+      birth_date: defaultValues?.birth_date ? new Date(defaultValues.birth_date) : null,
+      death_date: defaultValues?.death_date ? new Date(defaultValues.death_date) : null,
+      deceased: !!defaultValues?.death_date,
+      company_name: defaultValues?.company_name ?? "",
       foundation_date: null,
-      phone: "",
-      email: ""
-    }
+      phone: defaultValues?.phone ? maskPhone(defaultValues.phone) : "",
+      email: defaultValues?.email ?? "",
+    },
   });
 
   async function onSubmit(data: FormValues) {
@@ -130,15 +146,19 @@ export default function FormPetitioner({ onSuccess }: FormPetitionerProps) {
         email: data.email || undefined,
       };
 
-      await petitionersService.create(payload);
+      if (defaultValues?.id) {
+        await petitionersService.update(defaultValues.id, payload);
+        toast.success("Credor atualizado com sucesso!");
+      } else {
+        await petitionersService.create(payload);
+        toast.success("Credor cadastrado com sucesso!");
+        form.reset();
+        setPersonType("PF");
+      }
 
-      toast.success("Credor cadastrado com sucesso!");
-      form.reset();
-      setPersonType("PF");
       onSuccess?.();
     } catch (error) {
-      // Erro já é tratado pelo api.ts com toast
-      console.error("Erro ao cadastrar credor:", error);
+      console.error("Erro ao salvar credor:", error);
     } finally {
       setIsLoading(false);
     }
@@ -358,7 +378,7 @@ export default function FormPetitioner({ onSuccess }: FormPetitionerProps) {
                 Cadastrando...
               </>
             ) : (
-              "Cadastrar Credor"
+              defaultValues?.id ? "Salvar alterações" : "Cadastrar Credor"
             )}
           </Button>
         </div>

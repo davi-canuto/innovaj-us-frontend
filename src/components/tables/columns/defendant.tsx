@@ -1,7 +1,7 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Precatory } from "@/utils/types"
+import { Defendant } from "@/utils/types"
 import { ColumnDef } from "@tanstack/react-table"
 import { Trash2, Edit, MoreVertical } from "lucide-react"
 import {
@@ -11,46 +11,36 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { toast } from "sonner"
-import { precatoriesService } from "@/services/precatories"
+import { defendantsService } from "@/services/defendants"
 
-export function columnsPrecatory(onEdit: (precatory: Precatory) => void): ColumnDef<Precatory>[] {
+export function columnsDefendant(onEdit: (defendant: Defendant) => void): ColumnDef<Defendant>[] {
   return [
     {
       accessorKey: "name",
-      header: "Favorecido",
-      cell: ({ row }) => (
-        <div className="flex flex-col">
-          <span className="font-medium">{row.original.name}</span>
-        </div>
-      ),
+      header: "Nome / Razão Social",
     },
     {
-      accessorKey: "requested_amount",
-      header: "Valor Requerido",
-      cell: ({ row }) => (
-        <span>
-          R$ {row.original.requested_amount.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-        </span>
-      ),
+      accessorKey: "registration_number",
+      header: "CNPJ",
     },
     {
-      accessorKey: "stage",
-      header: "Etapa",
+      accessorKey: "email",
+      header: "E-mail",
     },
     {
       id: "actions",
       header: "",
       cell: ({ row }) => {
-        const precatory = row.original
+        const defendant = row.original
 
         const handleDelete = async () => {
-          if (!confirm(`Deseja deletar ${precatory.name}?`)) return
+          if (!confirm(`Deseja deletar "${defendant.name}"?`)) return
           try {
-            await precatoriesService.delete(precatory.id)
-            toast.success("Precatório deletado com sucesso")
+            await defendantsService.delete(defendant.id)
+            toast.success("Devedor deletado com sucesso")
             window.location.reload()
           } catch {
-            toast.error("Erro ao deletar precatório. Tente novamente.")
+            toast.error("Erro ao deletar devedor. Tente novamente.")
           }
         }
 
@@ -63,7 +53,7 @@ export function columnsPrecatory(onEdit: (precatory: Precatory) => void): Column
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(precatory)} className="cursor-pointer">
+              <DropdownMenuItem onClick={() => onEdit(defendant)} className="cursor-pointer">
                 Editar <Edit />
               </DropdownMenuItem>
               <hr />

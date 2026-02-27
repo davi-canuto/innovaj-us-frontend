@@ -1,13 +1,13 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { columnsPetitioner } from "@/components/tables/columns/petitioner"
 import { DataTable } from "@/components/tables/dataTable"
-import { List, Users } from "lucide-react"
-import { Petitioner } from "@/utils/types"
-import FormPetitioner from "@/components/forms/form-petitioner"
+import { columnsDefendant } from "@/components/tables/columns/defendant"
+import { Defendant } from "@/utils/types"
+import { defendantsService } from "@/services/defendants"
 import { AppDialog } from "@/components/layout/app-dialog"
-import { petitionersService } from "@/services/petitioners"
+import FormDebtor from "@/components/forms/form-debtor"
+import { Landmark } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -16,15 +16,15 @@ import {
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 
-export default function ListPetitioners() {
-  const [data, setData] = useState<Petitioner[]>([])
+export default function ListDefendants() {
+  const [data, setData] = useState<Defendant[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingPetitioner, setEditingPetitioner] = useState<Petitioner | null>(null)
+  const [editingDefendant, setEditingDefendant] = useState<Defendant | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
     try {
-      const result = await petitionersService.getAll()
+      const result = await defendantsService.getAll()
       setData(Array.isArray(result) ? result : [])
     } catch {
       setData([])
@@ -37,7 +37,7 @@ export default function ListPetitioners() {
     fetchData()
   }, [fetchData])
 
-  const columns = columnsPetitioner(setEditingPetitioner)
+  const columns = columnsDefendant(setEditingDefendant)
 
   return (
     <>
@@ -45,13 +45,13 @@ export default function ListPetitioners() {
         <section className="mx-auto lg:max-w-[90%]">
           <div className="flex items-center justify-between mb-6">
             <div className="text-3xl font-semibold flex items-center space-x-2">
-              <List strokeWidth={3} className="text-[#248A61]" />
-              <h1 className="text-[#1a384c]">Credores</h1>
+              <Landmark strokeWidth={3} className="text-[#248A61]" />
+              <h1 className="text-[#1a384c]">Devedores</h1>
             </div>
             <AppDialog
-              title="Novo Credor"
-              trigger="Novo Credor"
-              content={<FormPetitioner onSuccess={fetchData} />}
+              title="Novo Devedor"
+              trigger="Novo Devedor"
+              content={<FormDebtor onSuccess={fetchData} />}
             />
           </div>
           <hr />
@@ -64,24 +64,24 @@ export default function ListPetitioners() {
       </div>
 
       <Dialog
-        open={!!editingPetitioner}
-        onOpenChange={(open) => { if (!open) setEditingPetitioner(null) }}
+        open={!!editingDefendant}
+        onOpenChange={(open) => { if (!open) setEditingDefendant(null) }}
       >
         <DialogContent className="w-[90%]">
           <DialogHeader>
             <DialogTitle>
               <div className="text-3xl font-semibold flex items-center space-x-2 mb-2">
-                <Users strokeWidth={3} className="text-[#248A61]" />
-                <h1 className="text-[#1a384c]">Editar Credor</h1>
+                <Landmark strokeWidth={3} className="text-[#248A61]" />
+                <h1 className="text-[#1a384c]">Editar Devedor</h1>
               </div>
               <Separator className="my-4" />
             </DialogTitle>
           </DialogHeader>
-          {editingPetitioner && (
-            <FormPetitioner
-              defaultValues={editingPetitioner}
+          {editingDefendant && (
+            <FormDebtor
+              defaultValues={editingDefendant}
               onSuccess={() => {
-                setEditingPetitioner(null)
+                setEditingDefendant(null)
                 fetchData()
               }}
             />

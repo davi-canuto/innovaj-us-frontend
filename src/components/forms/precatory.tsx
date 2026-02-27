@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
     Form,
@@ -18,7 +18,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { DatePicker } from "@/components/ui/date-picker";
 import { toast } from "sonner";
 import { api } from "@/services/api";
+import { precatoriesService } from "@/services/precatories";
+import { petitionersService } from "@/services/petitioners";
+import { defendantsService } from "@/services/defendants";
 import { useRouter } from "next/navigation";
+import { Precatory, Petitioner, Defendant } from "@/utils/types";
 
 const FormSchema = z.object({
     name: z.string(),
@@ -29,7 +33,9 @@ const FormSchema = z.object({
     proposal_year: z.string(),
     requested_amount: z.string(),
     inclusion_source: z.string(),
-    stage: z.string()
+    stage: z.string(),
+    petitioner_id: z.string().optional(),
+    defendant_id: z.string().optional(),
 });
 
 
@@ -37,24 +43,35 @@ type FormValues = z.infer<typeof FormSchema>;
 
 interface PrecatoryFormProps {
     redirectOnSuccess?: boolean;
+    defaultValues?: Precatory;
+    onSuccess?: () => void;
 }
 
-export default function PrecatoryForm({ redirectOnSuccess = false }: PrecatoryFormProps) {
+export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues, onSuccess }: PrecatoryFormProps) {
     const router = useRouter();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [petitioners, setPetitioners] = useState<Petitioner[]>([]);
+    const [defendants, setDefendants] = useState<Defendant[]>([]);
+
+    useEffect(() => {
+        petitionersService.getAll().then((r) => setPetitioners(Array.isArray(r) ? r : [])).catch(() => {});
+        defendantsService.getAll().then((r) => setDefendants(Array.isArray(r) ? r : [])).catch(() => {});
+    }, []);
 
     const form = useForm<FormValues>({
         resolver: zodResolver(FormSchema),
         defaultValues: {
-            name: "",
-            number: "",
-            origin: "",
-            document_number: "",
-            protocol_date: new Date(),
-            proposal_year: "",
-            requested_amount: "",
-            inclusion_source: "",
-            stage: ""
+            name: defaultValues?.name ?? "",
+            number: defaultValues?.number ?? "",
+            origin: defaultValues?.origin ?? "",
+            document_number: defaultValues?.document_number ?? "",
+            protocol_date: defaultValues?.protocol_date ? new Date(defaultValues.protocol_date) : new Date(),
+            proposal_year: defaultValues?.proposal_year?.toString() ?? "",
+            requested_amount: defaultValues?.requested_amount?.toString() ?? "",
+            inclusion_source: defaultValues?.inclusion_source ?? "",
+            stage: defaultValues?.stage ?? "",
+            petitioner_id: defaultValues?.petitioner_id?.toString() ?? "",
+            defendant_id: defaultValues?.defendant_id?.toString() ?? "",
         }
     });
 
@@ -71,20 +88,27 @@ export default function PrecatoryForm({ redirectOnSuccess = false }: PrecatoryFo
                 requested_amount: parseFloat(data.requested_amount),
                 inclusion_source: data.inclusion_source,
                 stage: data.stage,
+                petitioner_id: data.petitioner_id ? parseInt(data.petitioner_id) : undefined,
+                defendant_id: data.defendant_id ? parseInt(data.defendant_id) : undefined,
             };
 
-            await api.post('/precatories', { record: payload });
-
-            toast.success("Precatório cadastrado com sucesso!");
-
-            if (redirectOnSuccess) {
-                router.push("/precatory/list");
+            if (defaultValues?.id) {
+                await precatoriesService.update(defaultValues.id, payload);
+                toast.success("Precatório atualizado com sucesso!");
+                onSuccess?.();
             } else {
-                form.reset();
+                await api.post('/precatories', { record: payload });
+                toast.success("Precatório cadastrado com sucesso!");
+                if (redirectOnSuccess) {
+                    router.push("/precatory/list");
+                } else {
+                    form.reset();
+                    onSuccess?.();
+                }
             }
         } catch (error) {
-            console.error("Error creating precatory:", error);
-            toast.error("Erro ao cadastrar precatório");
+            console.error("Error saving precatory:", error);
+            toast.error("Erro ao salvar precatório");
         } finally {
             setIsSubmitting(false);
         }
@@ -248,13 +272,61 @@ export default function PrecatoryForm({ redirectOnSuccess = false }: PrecatoryFo
                     )}
                 />
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FormField
+                        control={form.control}
+                        name="petitioner_id"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Credor</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o credor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {petitioners.map((p) => (
+                                            <SelectItem key={p.id} value={p.id.toString()}>
+                                                {p.company_name || p.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="defendant_id"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Devedor</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione o devedor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {defendants.map((d) => (
+                                            <SelectItem key={d.id} value={d.id.toString()}>
+                                                {d.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
                 <div className="w-full flex justify-end">
                     <Button
                         type="submit"
                         className="bg-[#1a384c] col-2 w-fit cursor-pointer py-6 font-bold"
                         disabled={isSubmitting}
                     >
-                        {isSubmitting ? "Cadastrando..." : "Cadastrar Precatório"}
+                        {isSubmitting ? "Salvando..." : defaultValues?.id ? "Salvar alterações" : "Cadastrar Precatório"}
                     </Button>
                 </div>
             </form>

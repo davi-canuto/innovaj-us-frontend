@@ -63,7 +63,7 @@ export function DashboardChart({ emAndamento, finalizados, cancelados }: Dashboa
                 <ChartPie strokeWidth={3} className=" text-[#248A61] " />
                 <h1 className=" text-[#1a384c]"> Precatórios por estágios</h1>
               </div></CardTitle>
-        <CardDescription>January - June 2024</CardDescription>
+        <CardDescription>Todos os precatórios cadastrados</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
         <ChartContainer
@@ -104,7 +104,7 @@ export function DashboardChart({ emAndamento, finalizados, cancelados }: Dashboa
                           y={(viewBox.cy || 0) + 24}
                           className="fill-muted-foreground"
                         >
-                          Visitors
+                          Precatórios
                         </tspan>
                       </text>
                     )
@@ -116,11 +116,11 @@ export function DashboardChart({ emAndamento, finalizados, cancelados }: Dashboa
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
-        <div className="flex items-center gap-2 leading-none font-medium">
-          +4 pra <TrendingUp className="h-4 w-4" />
+        <div className="flex items-center gap-2 leading-none font-medium text-[#1a384c]">
+          Distribuição por estágio <TrendingUp className="h-4 w-4" />
         </div>
         <div className="text-muted-foreground leading-none">
-          Mostrando todos os precatórios desde 2023
+          Atualizado em tempo real
         </div>
       </CardFooter>
     </Card>

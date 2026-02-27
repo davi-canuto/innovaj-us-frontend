@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { toast } from "sonner";
 import { signup } from "@/lib/actions/auth";
 
 import { Button } from "@/components/ui/button";
@@ -14,17 +13,19 @@ import Link from "next/link";
 export default function FormSignup() {
   const router = useRouter();
   const [isPending, setIsPending] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setIsPending(true);
+    setErrorMessage(null);
 
     const formData = new FormData(e.currentTarget);
     const password = formData.get('password') as string;
     const password_confirmation = formData.get('password_confirmation') as string;
 
     if (password !== password_confirmation) {
-      toast.error("As senhas não coincidem");
+      setErrorMessage("As senhas não coincidem");
       setIsPending(false);
       return;
     }
@@ -33,17 +34,13 @@ export default function FormSignup() {
       const result = await signup(formData);
 
       if (result.error) {
-        toast.error(result.error);
+        setErrorMessage(result.error);
+        setIsPending(false);
       } else {
-        toast.success("Conta criada com sucesso! Redirecionando...");
-        
-        await new Promise(resolve => setTimeout(resolve, 500));
-        router.refresh();
         router.push("/dashboard");
       }
-    } catch (error) {
-      toast.error("Erro ao criar conta. Tente novamente.");
-    } finally {
+    } catch {
+      setErrorMessage("Erro ao criar conta. Tente novamente.");
       setIsPending(false);
     }
   }
@@ -136,6 +133,12 @@ export default function FormSignup() {
             minLength={6}
           />
         </div>
+
+        {errorMessage && (
+          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+            {errorMessage}
+          </p>
+        )}
 
         <Button
           type="submit"
