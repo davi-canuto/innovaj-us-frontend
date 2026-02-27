@@ -44,6 +44,18 @@ export type Petitioner = {
   updated_at: string
 }
 
+export type Defendant = {
+  id: number
+  name: string
+  registration_number?: string
+  entity_type?: string
+  code?: string
+  phone?: string
+  email?: string
+  created_at: string
+  updated_at: string
+}
+
 export type Dependant = {
   id: number
   name: string

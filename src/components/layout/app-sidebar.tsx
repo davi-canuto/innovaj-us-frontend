@@ -54,8 +54,18 @@ const data = {
     },
     {
       title: "Devedores",
-      url: "/debtor",
-      icon: Landmark
+      url: "/debtor/list",
+      icon: Landmark,
+      items: [
+        {
+          title: "Cadastrar",
+          url: "/debtor/new",
+        },
+        {
+          title: "Listar",
+          url: "/debtor/list",
+        },
+      ],
     },
     {
       title: "Relatorios",
