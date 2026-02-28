@@ -3,21 +3,18 @@
 import { Button } from "@/components/ui/button"
 import { Defendant } from "@/utils/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { Trash2, Edit, MoreVertical } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { defendantsService } from "@/services/defendants"
 
-export function columnsDefendant(onEdit: (defendant: Defendant) => void): ColumnDef<Defendant>[] {
+export function columnsDefendant(): ColumnDef<Defendant>[] {
   return [
     {
       accessorKey: "name",
       header: "Nome / Razão Social",
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name}</span>
+      ),
     },
     {
       accessorKey: "registration_number",
@@ -33,7 +30,8 @@ export function columnsDefendant(onEdit: (defendant: Defendant) => void): Column
       cell: ({ row }) => {
         const defendant = row.original
 
-        const handleDelete = async () => {
+        const handleDelete = async (e: React.MouseEvent) => {
+          e.stopPropagation()
           if (!confirm(`Deseja deletar "${defendant.name}"?`)) return
           try {
             await defendantsService.delete(defendant.id)
@@ -45,23 +43,17 @@ export function columnsDefendant(onEdit: (defendant: Defendant) => void): Column
         }
 
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                <span className="sr-only">Abrir menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(defendant)} className="cursor-pointer">
-                Editar <Edit />
-              </DropdownMenuItem>
-              <hr />
-              <DropdownMenuItem onClick={handleDelete} className="cursor-pointer">
-                Deletar <Trash2 className="text-red-700" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+              onClick={handleDelete}
+              title="Deletar"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         )
       },
     },

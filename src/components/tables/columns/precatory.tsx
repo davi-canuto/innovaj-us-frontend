@@ -3,15 +3,52 @@
 import { Button } from "@/components/ui/button"
 import { Precatory } from "@/utils/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { Trash2, Edit, MoreVertical } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Trash2, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { precatoriesService } from "@/services/precatories"
+
+function PrecatoryActions({
+  precatory,
+  onEdit,
+}: {
+  precatory: Precatory
+  onEdit: (p: Precatory) => void
+}) {
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (!confirm(`Deseja deletar ${precatory.name}?`)) return
+    try {
+      await precatoriesService.delete(precatory.id)
+      toast.success("Precatório deletado com sucesso")
+      window.location.reload()
+    } catch {
+      toast.error("Erro ao deletar precatório. Tente novamente.")
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 hover:bg-blue-50 hover:text-blue-600"
+        onClick={(e) => { e.stopPropagation(); onEdit(precatory) }}
+        title="Editar"
+      >
+        <Pencil className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-8 w-8 p-0 hover:bg-red-50 hover:text-red-600"
+        onClick={handleDelete}
+        title="Deletar"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+    </div>
+  )
+}
 
 export function columnsPrecatory(onEdit: (precatory: Precatory) => void): ColumnDef<Precatory>[] {
   return [
@@ -40,40 +77,7 @@ export function columnsPrecatory(onEdit: (precatory: Precatory) => void): Column
     {
       id: "actions",
       header: "",
-      cell: ({ row }) => {
-        const precatory = row.original
-
-        const handleDelete = async () => {
-          if (!confirm(`Deseja deletar ${precatory.name}?`)) return
-          try {
-            await precatoriesService.delete(precatory.id)
-            toast.success("Precatório deletado com sucesso")
-            window.location.reload()
-          } catch {
-            toast.error("Erro ao deletar precatório. Tente novamente.")
-          }
-        }
-
-        return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0 cursor-pointer">
-                <span className="sr-only">Abrir menu</span>
-                <MoreVertical className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(precatory)} className="cursor-pointer">
-                Editar <Edit />
-              </DropdownMenuItem>
-              <hr />
-              <DropdownMenuItem onClick={handleDelete} className="cursor-pointer">
-                Deletar <Trash2 className="text-red-700" />
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )
-      },
+      cell: ({ row }) => <PrecatoryActions precatory={row.original} onEdit={onEdit} />,
     },
   ]
 }
