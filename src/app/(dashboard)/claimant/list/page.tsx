@@ -1,25 +1,19 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { columnsPetitioner } from "@/components/tables/columns/petitioner"
 import { DataTable } from "@/components/tables/dataTable"
-import { List, Users } from "lucide-react"
+import { Users } from "lucide-react"
 import { Petitioner } from "@/utils/types"
-import FormPetitioner from "@/components/forms/form-petitioner"
 import { AppDialog } from "@/components/layout/app-dialog"
+import FormPetitioner from "@/components/forms/form-petitioner"
 import { petitionersService } from "@/services/petitioners"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { Separator } from "@/components/ui/separator"
 
 export default function ListPetitioners() {
+  const router = useRouter()
   const [data, setData] = useState<Petitioner[]>([])
   const [loading, setLoading] = useState(true)
-  const [editingPetitioner, setEditingPetitioner] = useState<Petitioner | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -33,61 +27,36 @@ export default function ListPetitioners() {
     }
   }, [])
 
-  useEffect(() => {
-    fetchData()
-  }, [fetchData])
+  useEffect(() => { fetchData() }, [fetchData])
 
-  const columns = columnsPetitioner(setEditingPetitioner)
+  const columns = columnsPetitioner()
 
   return (
-    <>
-      <div className="border rounded-2xl p-6 bg-white">
-        <section className="mx-auto lg:max-w-[90%]">
-          <div className="flex items-center justify-between mb-6">
-            <div className="text-3xl font-semibold flex items-center space-x-2">
-              <List strokeWidth={3} className="text-[#248A61]" />
-              <h1 className="text-[#1a384c]">Credores</h1>
-            </div>
-            <AppDialog
-              title="Novo Credor"
-              trigger="Novo Credor"
-              content={<FormPetitioner onSuccess={fetchData} />}
-            />
+    <div className="border rounded-2xl p-6 bg-white">
+      <section className="mx-auto lg:max-w-[90%]">
+        <div className="flex items-center justify-between mb-6">
+          <div className="text-3xl font-semibold flex items-center space-x-2">
+            <Users strokeWidth={3} className="text-[#248A61]" />
+            <h1 className="text-[#1a384c]">Credores</h1>
           </div>
-          <hr />
-          {loading ? (
-            <p className="text-center text-gray-400 py-10">Carregando...</p>
-          ) : (
-            <DataTable columns={columns} data={data} />
-          )}
-        </section>
-      </div>
-
-      <Dialog
-        open={!!editingPetitioner}
-        onOpenChange={(open) => { if (!open) setEditingPetitioner(null) }}
-      >
-        <DialogContent className="w-[90%]">
-          <DialogHeader>
-            <DialogTitle>
-              <div className="text-3xl font-semibold flex items-center space-x-2 mb-2">
-                <Users strokeWidth={3} className="text-[#248A61]" />
-                <h1 className="text-[#1a384c]">Editar Credor</h1>
-              </div>
-              <Separator className="my-4" />
-            </DialogTitle>
-          </DialogHeader>
-          {editingPetitioner && (
-            <FormPetitioner
-              defaultValues={editingPetitioner}
-              onSuccess={() => {
-                setEditingPetitioner(null)
-                fetchData()
-              }}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+          <AppDialog
+            title="Novo Credor"
+            trigger="Novo Credor"
+            content={<FormPetitioner onSuccess={fetchData} />}
+          />
+        </div>
+        <hr />
+        {loading ? (
+          <p className="text-center text-gray-400 py-10">Carregando...</p>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={data}
+            filterPlaceholder="Buscar credor..."
+            onRowClick={(row) => router.push(`/claimant/${row.id}`)}
+          />
+        )}
+      </section>
+    </div>
   )
 }
