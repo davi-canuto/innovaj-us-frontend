@@ -56,6 +56,33 @@ export type Defendant = {
   updated_at: string
 }
 
+export type Organization = {
+  id: number
+  name: string
+  registration_number?: string
+  created_at: string
+  updated_at: string
+}
+
+export type Role = {
+  id: number
+  name: 'admin' | 'member'
+}
+
+export type OrganizationUser = {
+  id: number
+  organization_id: number
+  user_id: number
+  role: Role
+  user?: {
+    id: number
+    name: string
+    email: string
+  }
+  created_at: string
+  updated_at: string
+}
+
 export type Dependant = {
   id: number
   name: string

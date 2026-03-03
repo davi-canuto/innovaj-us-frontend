@@ -172,7 +172,7 @@ export default function PrecatoryShowPage() {
               <div className="flex flex-col gap-0.5">
                 <span className="text-xs text-gray-500 uppercase tracking-wide">Valor Requerido</span>
                 <span className="text-xl font-bold text-[#248A61]">
-                  {formatCurrency(precatory.requested_amount)}
+                  {formatCents(precatory.requested_amount)}
                 </span>
               </div>
               <InfoRow label="Principal" value={formatCents(precatory.value_principal_cents)} />

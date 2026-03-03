@@ -8,7 +8,8 @@ import {
   CircleDollarSign,
   Users,
   FileText,
-  Landmark
+  Landmark,
+  Building2,
 } from "lucide-react"
 
 import { NavMain } from "@/components/ui/sideBar/nav-main"
@@ -23,8 +24,9 @@ const data = {
   navMain: [
     { title: "Precatórios", url: "/precatory/list", icon: CircleDollarSign },
     { title: "Credores",    url: "/claimant/list",  icon: Users },
-    { title: "Devedores",   url: "/debtor/list",    icon: Landmark },
-    { title: "Relatórios",  url: "/dashboard",      icon: FileText },
+    { title: "Devedores",    url: "/debtor/list",       icon: Landmark },
+    { title: "Organizações", url: "/organization/list", icon: Building2 },
+    { title: "Relatórios",   url: "/dashboard",         icon: FileText },
   ],
 }
 
