@@ -20,6 +20,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { maskCNPJ, maskCPF, maskPhone } from "@/utils/masks";
 import { Separator } from "../ui/separator";
 import { petitionersService } from "@/services/petitioners";
+import { ApiValidationError } from "@/services/api";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
@@ -158,7 +159,15 @@ export default function FormPetitioner({ onSuccess, defaultValues }: FormPetitio
 
       onSuccess?.();
     } catch (error) {
-      console.error("Erro ao salvar credor:", error);
+      if (error instanceof ApiValidationError) {
+        Object.entries(error.errors).forEach(([field, msgs]) => {
+          form.setError(field as Parameters<typeof form.setError>[0], {
+            message: msgs.join(", "),
+          });
+        });
+      } else {
+        toast.error("Erro ao salvar credor");
+      }
     } finally {
       setIsLoading(false);
     }

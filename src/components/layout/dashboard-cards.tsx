@@ -31,12 +31,12 @@ export function DashboardCards({ stats }: DashboardCardsProps) {
                 color={""}
             />
             <AppCard
-                title={`R$ ${stats.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                title={`R$ ${(stats.valorTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 description={"Valor Total Estimado"}
                 color={""}
             />
             <AppCard
-                title={`R$ ${stats.desembolsado30Dias.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                title={`R$ ${(stats.desembolsado30Dias / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                 description={"Desembolsado no Período (Ult. 30 dias)"}
                 color={""}
             />

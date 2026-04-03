@@ -146,6 +146,13 @@ export async function logout() {
   redirect('/login')
 }
 
+export async function clearSessionAndRedirect() {
+  const cookieStore = await cookies()
+  cookieStore.delete('auth_token')
+  cookieStore.delete('user_data')
+  redirect('/login')
+}
+
 export async function getToken() {
   const cookieStore = await cookies()
   return cookieStore.get('auth_token')?.value

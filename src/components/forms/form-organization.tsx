@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { maskCNPJ } from "@/utils/masks"
 import { organizationsService } from "@/services/organizations"
+import { ApiValidationError } from "@/services/api"
 import { Organization } from "@/utils/types"
 
 const FormSchema = z.object({
@@ -65,8 +66,16 @@ export default function FormOrganization({ defaultValues, onSuccess }: FormOrgan
         form.reset()
       }
       onSuccess?.()
-    } catch {
-      setErrorMessage("Erro ao salvar organização. Tente novamente.")
+    } catch (error) {
+      if (error instanceof ApiValidationError) {
+        Object.entries(error.errors).forEach(([field, msgs]) => {
+          form.setError(field as Parameters<typeof form.setError>[0], {
+            message: msgs.join(", "),
+          })
+        })
+      } else {
+        setErrorMessage("Erro ao salvar organização. Tente novamente.")
+      }
     }
   }
 

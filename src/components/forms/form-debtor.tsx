@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { maskCNPJ, maskPhone } from "@/utils/masks";
 import { defendantsService } from "@/services/defendants";
+import { ApiValidationError } from "@/services/api";
 import { Defendant } from "@/utils/types";
 
 const FormSchema = z.object({
@@ -84,8 +85,16 @@ export default function FormDebtor({ defaultValues, onSuccess }: FormDebtorProps
             toast.success(defaultValues?.id ? "Devedor atualizado com sucesso!" : "Devedor cadastrado com sucesso!");
             form.reset();
             onSuccess?.();
-        } catch {
-            setErrorMessage("Erro ao salvar devedor. Tente novamente.");
+        } catch (error) {
+            if (error instanceof ApiValidationError) {
+                Object.entries(error.errors).forEach(([field, msgs]) => {
+                    form.setError(field as Parameters<typeof form.setError>[0], {
+                        message: msgs.join(", "),
+                    });
+                });
+            } else {
+                setErrorMessage("Erro ao salvar devedor. Tente novamente.");
+            }
         }
     }
 

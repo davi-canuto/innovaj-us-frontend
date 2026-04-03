@@ -21,6 +21,71 @@ export type Precatory = {
   value_interest_cents?: number
   value_costs_cents?: number
   user_id?: number
+  // Fila / processos
+  filing_date?: string
+  administrative_process?: string
+  pje_process?: string
+  // Honorários
+  fee_percentage?: number
+  fee_amount_cents?: number
+  has_contract?: boolean
+  // RPV
+  is_rpv?: boolean
+  rpv_amount_cents?: number
+  succumbence_fee_cents?: number
+  contractual_fee_cents?: number
+  // Negociação
+  is_negotiated?: boolean
+  negotiated_amount_cents?: number
+  disbursement_cents?: number
+  costs_cents?: number
+  payment_forecast_date?: string
+  position_at_purchase?: number
+  last_updated_date?: string
+  current_value_cents?: number
+  // Campo calculado pelo backend
+  priority_level?: 'super' | 'alimentar' | 'comum'
+  last_value_history?: PrecatoryValueHistory
+  value_histories?: PrecatoryValueHistory[]
+  petitioner?: Petitioner
+  defendant?: Defendant
+  created_at: string
+  updated_at: string
+}
+
+export type PrecatoryValueHistory = {
+  id: number
+  precatory_id: number
+  reference_date: string
+  amount_cents: number
+  notes?: string
+  created_by_user_id?: number
+  created_at: string
+  updated_at: string
+}
+
+export type PaymentQueue = {
+  id: number
+  defendant_id: number
+  year: number
+  name: string
+  description?: string
+  organization_id?: number
+  defendant?: Defendant
+  created_at: string
+  updated_at: string
+}
+
+export type PaymentQueueEntry = {
+  id: number
+  payment_queue_id: number
+  precatory_id: number
+  position: number
+  notes?: string
+  precatory?: Precatory & {
+    priority_level: 'super' | 'alimentar' | 'comum'
+    last_value_history?: PrecatoryValueHistory
+  }
   created_at: string
   updated_at: string
 }

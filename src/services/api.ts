@@ -1,5 +1,12 @@
 import { toast } from "sonner"
 
+export class ApiValidationError extends Error {
+  constructor(public readonly errors: Record<string, string[]>) {
+    super("Validation error")
+    this.name = "ApiValidationError"
+  }
+}
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
 
 function getTokenFromCookie(): string | null {
@@ -74,8 +81,10 @@ async function request(endpoint: string, options: RequestInit = {}, isRetry = fa
     if (newToken) {
       return request(endpoint, options, true)
     }
-    // Refresh falhou — redireciona para login
+    // Refresh falhou — limpa cookie e redireciona para login
     if (typeof window !== 'undefined') {
+      document.cookie = 'auth_token=; path=/; max-age=0'
+      document.cookie = 'user_data=; path=/; max-age=0'
       toast.error("Sessão expirada. Faça login novamente.")
       window.location.href = '/login'
     }
@@ -88,9 +97,11 @@ async function request(endpoint: string, options: RequestInit = {}, isRetry = fa
     let errorMessage = error.message || error.error || `Erro ${response.status}`
 
     if (error.errors && typeof error.errors === 'object') {
-      errorMessage = Object.entries(error.errors)
-        .flatMap(([field, msgs]) => (msgs as string[]).map((m) => `${field}: ${m}`))
-        .join(', ') || errorMessage
+      const isGetRequest = !options.method || options.method === 'GET'
+      if (!isGetRequest && typeof window !== 'undefined') {
+        toast.error("Verifique os campos do formulário")
+      }
+      throw new ApiValidationError(error.errors)
     }
 
     const isGetRequest = !options.method || options.method === 'GET'

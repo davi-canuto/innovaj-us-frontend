@@ -2,15 +2,20 @@ import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
 const publicRoutes = ['/login', '/signup']
+const ignoredRoutes = ['/api-proxy', '/api']
 
 export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth_token')?.value
   const { pathname } = request.nextUrl
 
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  const isIgnoredRoute = ignoredRoutes.some(route => pathname.startsWith(route))
+
+  if (isIgnoredRoute) return NextResponse.next()
 
   if (!token && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url)
+    loginUrl.searchParams.set('from', pathname)
     return NextResponse.redirect(loginUrl)
   }
 

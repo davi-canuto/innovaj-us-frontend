@@ -10,6 +10,9 @@ import {
   FileText,
   Landmark,
   Building2,
+  ListOrdered,
+  Receipt,
+  TrendingUp,
 } from "lucide-react"
 
 import { NavMain } from "@/components/ui/sideBar/nav-main"
@@ -22,11 +25,14 @@ import {
 
 const data = {
   navMain: [
-    { title: "Precatórios", url: "/precatory/list", icon: CircleDollarSign },
-    { title: "Credores",    url: "/claimant/list",  icon: Users },
-    { title: "Devedores",    url: "/debtor/list",       icon: Landmark },
-    { title: "Organizações", url: "/organization/list", icon: Building2 },
-    { title: "Relatórios",   url: "/dashboard",         icon: FileText },
+    { title: "Precatórios",      url: "/precatory/list",   icon: CircleDollarSign },
+    { title: "Credores",         url: "/claimant/list",    icon: Users },
+    { title: "Devedores",        url: "/debtor/list",      icon: Landmark },
+    { title: "Fila de Pagamento",url: "/payment-queue",    icon: ListOrdered },
+    { title: "RPVs",             url: "/rpv",              icon: Receipt },
+    { title: "Negociações",      url: "/negotiations",     icon: TrendingUp },
+    { title: "Organizações",     url: "/organization/list",icon: Building2 },
+    { title: "Relatórios",       url: "/dashboard",        icon: FileText },
   ],
 }
 
