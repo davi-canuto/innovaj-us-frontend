@@ -31,7 +31,9 @@ const FormSchema = z.object({
     number: z.string().min(1, "Número do protocolo é obrigatório"),
     origin: z.string().min(1, "Origem é obrigatória"),
     document_number: z.string().min(1, "Número do documento é obrigatório"),
-    protocol_date: z.date({ required_error: "Data do protocolo é obrigatória" }),
+    protocol_date: z.date().refine((val) => val !== undefined, {
+        message: "Data do protocolo é obrigatória",
+    }),
     proposal_year: z.string().min(1, "Ano da proposta é obrigatório"),
     requested_amount: z.string().min(1, "Valor requerido é obrigatório"),
     inclusion_source: z.string().min(1, "Fonte de inclusão é obrigatória"),
