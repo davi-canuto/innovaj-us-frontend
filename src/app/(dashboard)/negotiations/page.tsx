@@ -18,19 +18,43 @@ function formatDate(value?: string | null) {
   return new Date(value).toLocaleDateString("pt-BR")
 }
 
-function calcProfitCents(p: Precatory): number | null {
+function formatPercent(value?: number | null) {
+  if (value == null) return "—"
+  return `${value.toFixed(2)}%`
+}
+
+// Ganho Estimado = negotiated_amount - disbursement - costs
+function calcGanhoEstimado(p: Precatory): number | null {
   if (!p.negotiated_amount_cents || !p.disbursement_cents) return null
   return p.negotiated_amount_cents - p.disbursement_cents - (p.costs_cents ?? 0)
 }
 
-function calcRentabilidadeMes(p: Precatory): number | null {
-  const profit = calcProfitCents(p)
-  if (profit == null || !p.disbursement_cents || !p.created_at) return null
-  const months = Math.max(
-    1,
-    (new Date().getTime() - new Date(p.created_at).getTime()) / (1000 * 60 * 60 * 24 * 30)
-  )
-  return (profit / p.disbursement_cents / months) * 100
+// Ganho Atualizado = current_value - disbursement - costs
+function calcGanhoAtualizado(p: Precatory): number | null {
+  if (!p.current_value_cents || !p.disbursement_cents) return null
+  return p.current_value_cents - p.disbursement_cents - (p.costs_cents ?? 0)
+}
+
+// Rentabilidade Estimada = ganho estimado / desembolsado * 100
+function calcRentabilidadeEstimada(p: Precatory): number | null {
+  const ganho = calcGanhoEstimado(p)
+  const desembolsado = (p.disbursement_cents ?? 0) - (p.costs_cents ?? 0)
+  if (ganho == null || desembolsado <= 0) return null
+  return (ganho / desembolsado) * 100
+}
+
+// Rentabilidade Atualizada = ganho atualizado / desembolsado * 100
+function calcRentabilidadeAtualizada(p: Precatory): number | null {
+  const ganho = calcGanhoAtualizado(p)
+  const desembolsado = (p.disbursement_cents ?? 0) - (p.costs_cents ?? 0)
+  if (ganho == null || desembolsado <= 0) return null
+  return (ganho / desembolsado) * 100
+}
+
+// % do valor negociado sobre o face value
+function calcPercentFaceValue(p: Precatory): number | null {
+  if (!p.negotiated_amount_cents || !p.requested_amount) return null
+  return (p.negotiated_amount_cents / p.requested_amount) * 100
 }
 
 export default function NegotiationsPage() {
@@ -48,18 +72,31 @@ export default function NegotiationsPage() {
       .finally(() => setLoading(false))
   }, [])
 
-  const totalDisbursement = negotiations.reduce((s, p) => s + (p.disbursement_cents ?? 0), 0)
-  const totalCurrentValue = negotiations.reduce((s, p) => s + (p.current_value_cents ?? 0), 0)
-  const totalProfit = negotiations.reduce((s, p) => {
-    if (!p.negotiated_amount_cents || !p.disbursement_cents) return s
-    return s + p.negotiated_amount_cents - p.disbursement_cents - (p.costs_cents ?? 0)
+  const desembolsadoTotal = negotiations.reduce((s, p) => {
+    const d = (p.disbursement_cents ?? 0) - (p.costs_cents ?? 0)
+    return s + Math.max(0, d)
   }, 0)
 
-  const validRents = negotiations
-    .map(calcRentabilidadeMes)
-    .filter((v): v is number => v !== null)
-  const avgRent = validRents.length > 0
-    ? validRents.reduce((s, v) => s + v, 0) / validRents.length
+  const totalCurrentValue = negotiations.reduce((s, p) => s + (p.current_value_cents ?? 0), 0)
+
+  const totalGanhoEstimado = negotiations.reduce((s, p) => {
+    const g = calcGanhoEstimado(p)
+    return g != null ? s + g : s
+  }, 0)
+
+  const totalGanhoAtualizado = negotiations.reduce((s, p) => {
+    const g = calcGanhoAtualizado(p)
+    return g != null ? s + g : s
+  }, 0)
+
+  const rentEstimadas = negotiations.map(calcRentabilidadeEstimada).filter((v): v is number => v !== null)
+  const avgRentEstimada = rentEstimadas.length > 0
+    ? rentEstimadas.reduce((s, v) => s + v, 0) / rentEstimadas.length
+    : null
+
+  const rentAtualizadas = negotiations.map(calcRentabilidadeAtualizada).filter((v): v is number => v !== null)
+  const avgRentAtualizada = rentAtualizadas.length > 0
+    ? rentAtualizadas.reduce((s, v) => s + v, 0) / rentAtualizadas.length
     : null
 
   return (
@@ -82,16 +119,45 @@ export default function NegotiationsPage() {
       </div>
 
       {/* Cards de resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border rounded-2xl bg-white">
           <CardContent className="pt-5 flex items-start gap-3">
             <Wallet className="h-8 w-8 text-indigo-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Total Desembolsado</p>
-              <p className="text-xl font-bold text-[#1a384c] mt-1">{formatCents(totalDisbursement)}</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Valor Desembolsado</p>
+              <p className="text-xl font-bold text-[#1a384c] mt-1">{formatCents(desembolsadoTotal)}</p>
+              <p className="text-xs text-gray-400 mt-0.5">Disbursement − Custas</p>
             </div>
           </CardContent>
         </Card>
+        <Card className="border rounded-2xl bg-white">
+          <CardContent className="pt-5 flex items-start gap-3">
+            <DollarSign className="h-8 w-8 text-emerald-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Ganho Estimado</p>
+              <p className={`text-xl font-bold mt-1 ${totalGanhoEstimado >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                {formatCents(totalGanhoEstimado)}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">Rent. média: {avgRentEstimada != null ? `${avgRentEstimada.toFixed(2)}%` : "—"}</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border rounded-2xl bg-white">
+          <CardContent className="pt-5 flex items-start gap-3">
+            <BarChart3 className="h-8 w-8 text-purple-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Ganho Atualizado</p>
+              <p className={`text-xl font-bold mt-1 ${totalGanhoAtualizado >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                {formatCents(totalGanhoAtualizado)}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">Rent. média: {avgRentAtualizada != null ? `${avgRentAtualizada.toFixed(2)}%` : "—"}</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Cards secundários */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="border rounded-2xl bg-white">
           <CardContent className="pt-5 flex items-start gap-3">
             <BarChart3 className="h-8 w-8 text-[#248A61] mt-0.5 shrink-0" />
@@ -103,23 +169,16 @@ export default function NegotiationsPage() {
         </Card>
         <Card className="border rounded-2xl bg-white">
           <CardContent className="pt-5 flex items-start gap-3">
-            <DollarSign className="h-8 w-8 text-emerald-500 mt-0.5 shrink-0" />
+            <Percent className="h-8 w-8 text-amber-400 mt-0.5 shrink-0" />
             <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Lucro Estimado</p>
-              <p className={`text-xl font-bold mt-1 ${totalProfit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                {formatCents(totalProfit)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border rounded-2xl bg-white">
-          <CardContent className="pt-5 flex items-start gap-3">
-            <Percent className="h-8 w-8 text-purple-400 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Rent. Média / Mês</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Rentabilidade Estimada / Atualizada</p>
               <p className="text-xl font-bold text-[#1a384c] mt-1">
-                {avgRent != null ? `${avgRent.toFixed(2)}%` : "—"}
+                {avgRentEstimada != null ? `${avgRentEstimada.toFixed(2)}%` : "—"}
+                {avgRentAtualizada != null && (
+                  <span className="text-sm text-purple-600 ml-2">/ {avgRentAtualizada.toFixed(2)}%</span>
+                )}
               </p>
+              <p className="text-xs text-gray-400 mt-0.5">Estimada / Atualizada (médias)</p>
             </div>
           </CardContent>
         </Card>
@@ -137,7 +196,7 @@ export default function NegotiationsPage() {
             <div className="py-12 flex flex-col items-center gap-3 text-gray-400">
               <TrendingUp className="h-10 w-10" />
               <p>Nenhuma negociação cadastrada.</p>
-              <p className="text-xs text-center">Para cadastrar, crie um precatório e marque "Precatório negociado/comprado".</p>
+              <p className="text-xs text-center">Para cadastrar, crie um precatório e marque &quot;Precatório negociado/comprado&quot;.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -145,35 +204,46 @@ export default function NegotiationsPage() {
                 <thead>
                   <tr className="border-b">
                     <th className="text-left py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Nome</th>
-                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Orig.</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Requerido</th>
                     <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Negociado</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">% Requerido</th>
                     <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Desembolso</th>
-                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Custas</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Honorários</th>
                     <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Atual</th>
-                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Lucro</th>
-                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Rent./Mês</th>
-                    <th className="text-left py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Previsão Pagto.</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Est.</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Rent. Est.</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Atual.</th>
+                    <th className="text-right py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Rent. Atual.</th>
+                    <th className="text-left py-3 pr-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Previsão</th>
                     <th className="py-3 w-8"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {negotiations.map((p) => {
-                    const profit = calcProfitCents(p)
-                    const rent = calcRentabilidadeMes(p)
+                    const ganhoEst = calcGanhoEstimado(p)
+                    const ganhoAtual = calcGanhoAtualizado(p)
+                    const rentEst = calcRentabilidadeEstimada(p)
+                    const rentAtual = calcRentabilidadeAtualizada(p)
+                    const pctFace = calcPercentFaceValue(p)
                     return (
                       <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
                         <td className="py-3 pr-3 font-medium text-[#1a384c]">{p.name}</td>
                         <td className="py-3 pr-3 text-right text-gray-600">{formatCents(p.requested_amount)}</td>
                         <td className="py-3 pr-3 text-right text-gray-600">{formatCents(p.negotiated_amount_cents)}</td>
+                        <td className="py-3 pr-3 text-right text-amber-600 font-medium">{formatPercent(pctFace)}</td>
                         <td className="py-3 pr-3 text-right text-gray-600">{formatCents(p.disbursement_cents)}</td>
-                        <td className="py-3 pr-3 text-right text-gray-600">{formatCents(p.costs_cents)}</td>
-                        <td className="py-3 pr-3 text-right font-semibold text-[#248A61]">{formatCents(p.current_value_cents)}</td>
-                        <td className={`py-3 pr-3 text-right font-semibold ${profit != null && profit >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                          {formatCents(profit)}
-                        </td>
                         <td className="py-3 pr-3 text-right text-gray-600">
-                          {rent != null ? `${rent.toFixed(2)}%` : "—"}
+                          {p.fee_percentage ? `${p.fee_percentage}%` : "—"}
                         </td>
+                        <td className="py-3 pr-3 text-right font-semibold text-[#248A61]">{formatCents(p.current_value_cents)}</td>
+                        <td className={`py-3 pr-3 text-right font-semibold ${ganhoEst != null && ganhoEst >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                          {formatCents(ganhoEst)}
+                        </td>
+                        <td className="py-3 pr-3 text-right text-emerald-700">{formatPercent(rentEst)}</td>
+                        <td className={`py-3 pr-3 text-right font-semibold ${ganhoAtual != null && ganhoAtual >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                          {formatCents(ganhoAtual)}
+                        </td>
+                        <td className="py-3 pr-3 text-right text-purple-700">{formatPercent(rentAtual)}</td>
                         <td className="py-3 pr-3 text-gray-600">{formatDate(p.payment_forecast_date)}</td>
                         <td className="py-3">
                           <Button

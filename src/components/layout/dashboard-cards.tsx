@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, ClipboardList, Footprints } from "lucide-react"
+import { Check, ClipboardList, TrendingUp, Wallet } from "lucide-react"
 import { AppCard } from "./app-card"
 import { DashboardStats } from "@/lib/actions/dashboard"
 
@@ -11,7 +11,7 @@ interface DashboardCardsProps {
 
 export function DashboardCards({ stats }: DashboardCardsProps) {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             <AppCard
                 title={stats.total.toString()}
                 description={"Total de precatórios"}
@@ -19,25 +19,21 @@ export function DashboardCards({ stats }: DashboardCardsProps) {
                 color={""}
             />
             <AppCard
-                title={stats.finalizados.toString()}
-                description={"Precatórios finalizados"}
+                title={stats.concluidos.toString()}
+                description={"Precatórios concluídos"}
                 icon={Check}
                 color={""}
             />
             <AppCard
-                title={stats.emAndamento.toString()}
-                description={"Precatórios em andamento"}
-                icon={Footprints}
+                title={`R$ ${(stats.valorTotalCarteira / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                description={"Valor Total da Carteira"}
+                icon={TrendingUp}
                 color={""}
             />
             <AppCard
-                title={`R$ ${(stats.valorTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                description={"Valor Total Estimado"}
-                color={""}
-            />
-            <AppCard
-                title={`R$ ${(stats.desembolsado30Dias / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
-                description={"Desembolsado no Período (Ult. 30 dias)"}
+                title={`R$ ${(stats.desembolsadoTotal / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                description={"Total Desembolsado"}
+                icon={Wallet}
                 color={""}
             />
         </div>

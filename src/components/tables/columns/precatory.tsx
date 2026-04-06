@@ -8,7 +8,8 @@ import { toast } from "sonner"
 import { precatoriesService } from "@/services/precatories"
 
 const STAGE_STYLES: Record<string, string> = {
-  "Em andamento": "bg-yellow-100 text-yellow-800",
+  "Em negociação": "bg-yellow-100 text-yellow-800",
+  "Em andamento":  "bg-yellow-100 text-yellow-800",
   "Concluído":    "bg-emerald-100 text-emerald-800",
   "Cancelado":    "bg-red-100 text-red-800",
   "Pendente":     "bg-gray-100 text-gray-600",

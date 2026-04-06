@@ -1,3 +1,5 @@
+export type PrecatoryStatus = 'em_negociacao' | 'negociado' | 'concluido' | 'cancelado'
+
 export type Precatory = {
   id: number
   name: string
@@ -9,6 +11,8 @@ export type Precatory = {
   requested_amount: number
   inclusion_source: string
   stage: string
+  // Novo campo de status (substitui stage para fluxo de negociação)
+  status?: PrecatoryStatus
   base_date_update?: string
   nature_of_credit?: string
   judgment_date?: string
@@ -29,6 +33,8 @@ export type Precatory = {
   fee_percentage?: number
   fee_amount_cents?: number
   has_contract?: boolean
+  // Porcentagem do valor negociado sobre o face value
+  percentage_of_face_value?: number
   // RPV
   is_rpv?: boolean
   rpv_amount_cents?: number
@@ -40,9 +46,17 @@ export type Precatory = {
   disbursement_cents?: number
   costs_cents?: number
   payment_forecast_date?: string
+  payment_forecast_year?: number
   position_at_purchase?: number
   last_updated_date?: string
   current_value_cents?: number
+  // Ganho atualizado (current_value - disbursement - costs)
+  ganho_atualizado_cents?: number
+  // Data de atualização do valor atual
+  data_atualizacao_valor?: string
+  // Rentabilidades calculadas
+  rentabilidade_estimada?: number
+  rentabilidade_atualizada?: number
   // Campo calculado pelo backend
   priority_level?: 'super' | 'alimentar' | 'comum'
   last_value_history?: PrecatoryValueHistory
@@ -159,4 +173,27 @@ export type Dependant = {
   petitioner_id: number
   created_at: string
   updated_at: string
+}
+
+// Faixas de porcentagem por ano de pagamento
+// ano atual      → 50%, 55%, 60%
+// ano atual + 1  → 40%, 45%, 50%
+// ano atual + 2  → 30%, 35%, 40%
+// ano atual + 3+ → 25%, 30%, 35%
+export type QuotationRange = {
+  year: number
+  label: string // "2026", "2027", etc.
+  percentages: [number, number, number] // [baixo, médio, alto]
+  values: [number, number, number] // valores calculados em cents
+}
+
+export type Quotation = {
+  precatory_id: number
+  precatory_name: string
+  precatory_number: string
+  face_value_cents: number // requested_amount
+  petitioner_name?: string
+  defendant_name?: string
+  payment_forecast_year?: number
+  ranges: QuotationRange[]
 }

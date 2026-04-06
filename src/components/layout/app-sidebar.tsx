@@ -7,12 +7,13 @@ import Link from "next/link"
 import {
   CircleDollarSign,
   Users,
-  FileText,
+  LayoutDashboard,
   Landmark,
   Building2,
   ListOrdered,
   Receipt,
   TrendingUp,
+  Tag,
 } from "lucide-react"
 
 import { NavMain } from "@/components/ui/sideBar/nav-main"
@@ -31,8 +32,9 @@ const data = {
     { title: "Fila de Pagamento",url: "/payment-queue",    icon: ListOrdered },
     { title: "RPVs",             url: "/rpv",              icon: Receipt },
     { title: "Negociações",      url: "/negotiations",     icon: TrendingUp },
+    { title: "Cotações",          url: "/quotations",       icon: Tag },
     { title: "Organizações",     url: "/organization/list",icon: Building2 },
-    { title: "Relatórios",       url: "/dashboard",        icon: FileText },
+    { title: "Dashboards",       url: "/dashboard",        icon: LayoutDashboard },
   ],
 }
 

@@ -38,6 +38,7 @@ const FormSchema = z.object({
     requested_amount: z.string().min(1, "Valor requerido é obrigatório"),
     inclusion_source: z.string().min(1, "Fonte de inclusão é obrigatória"),
     stage: z.string().min(1, "Estágio é obrigatório"),
+    status: z.string().optional(),
     petitioner_id: z.string().optional(),
     defendant_id: z.string().optional(),
     // Processos
@@ -58,6 +59,7 @@ const FormSchema = z.object({
     disbursement_cents: z.string().optional(),
     costs_cents: z.string().optional(),
     payment_forecast_date: z.date().optional(),
+    percentage_of_face_value: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof FormSchema>;
@@ -102,6 +104,7 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
             requested_amount: defaultValues?.requested_amount ? (defaultValues.requested_amount / 100).toFixed(2) : "",
             inclusion_source: defaultValues?.inclusion_source ?? "",
             stage: defaultValues?.stage ?? "",
+            status: defaultValues?.status ?? "",
             petitioner_id: defaultValues?.petitioner_id?.toString() ?? "",
             defendant_id: defaultValues?.defendant_id?.toString() ?? "",
             filing_date: defaultValues?.filing_date ? new Date(defaultValues.filing_date) : undefined,
@@ -118,6 +121,7 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
             disbursement_cents: centsToString(defaultValues?.disbursement_cents),
             costs_cents: centsToString(defaultValues?.costs_cents),
             payment_forecast_date: defaultValues?.payment_forecast_date ? new Date(defaultValues.payment_forecast_date) : undefined,
+            percentage_of_face_value: defaultValues?.percentage_of_face_value?.toString() ?? "",
         }
     });
 
@@ -137,6 +141,7 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                 requested_amount: Math.round(parseFloat(data.requested_amount) * 100),
                 inclusion_source: data.inclusion_source,
                 stage: data.stage,
+                status: data.status || undefined,
                 petitioner_id: data.petitioner_id ? parseInt(data.petitioner_id) : undefined,
                 defendant_id: data.defendant_id ? parseInt(data.defendant_id) : undefined,
                 filing_date: data.filing_date ? data.filing_date.toISOString().split('T')[0] : undefined,
@@ -160,6 +165,9 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                 payload.costs_cents = stringToCents(data.costs_cents);
                 payload.payment_forecast_date = data.payment_forecast_date
                     ? data.payment_forecast_date.toISOString().split('T')[0]
+                    : undefined;
+                payload.percentage_of_face_value = data.percentage_of_face_value
+                    ? parseFloat(data.percentage_of_face_value)
                     : undefined;
             }
 
@@ -284,14 +292,29 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                             </FormItem>
                         )} />
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField control={form.control} name="status" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Status</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value || ""}>
+                                    <SelectTrigger><SelectValue placeholder="Selecione o status" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="em_negociacao">Em Negociação</SelectItem>
+                                        <SelectItem value="negociado">Negociado</SelectItem>
+                                        <SelectItem value="concluido">Concluído</SelectItem>
+                                        <SelectItem value="cancelado">Cancelado</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
                         <FormField control={form.control} name="stage" render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Estágio *</FormLabel>
+                                <FormLabel>Estágio (legado) *</FormLabel>
                                 <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <SelectTrigger><SelectValue placeholder="Selecione o estágio" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Em andamento">Em andamento</SelectItem>
+                                        <SelectItem value="Em negociação">Em negociação</SelectItem>
                                         <SelectItem value="Concluído">Concluído</SelectItem>
                                         <SelectItem value="Cancelado">Cancelado</SelectItem>
                                         <SelectItem value="Pendente">Pendente</SelectItem>
@@ -478,6 +501,13 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                                 <FormItem>
                                     <FormLabel>Previsão de Pagamento</FormLabel>
                                     <FormControl><DatePicker selected={field.value} onSelect={field.onChange} /></FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )} />
+                            <FormField control={form.control} name="percentage_of_face_value" render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>% do Valor Requerido</FormLabel>
+                                    <FormControl><Input placeholder="Ex: 40" {...field} type="number" step="0.01" min="0" max="100" /></FormControl>
                                     <FormMessage />
                                 </FormItem>
                             )} />

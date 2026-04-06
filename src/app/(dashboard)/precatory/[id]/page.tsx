@@ -43,10 +43,25 @@ const INCLUSION_SOURCE_LABELS: Record<string, string> = {
 }
 
 const STAGE_STYLES: Record<string, string> = {
+  "Em negociação": "bg-yellow-100 text-yellow-800",
   "Em andamento": "bg-yellow-100 text-yellow-800",
   "Concluído": "bg-green-100 text-green-800",
   "Cancelado": "bg-red-100 text-red-800",
   "Pendente": "bg-gray-100 text-gray-700",
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  em_negociacao: "bg-yellow-100 text-yellow-800",
+  negociado: "bg-indigo-100 text-indigo-800",
+  concluido: "bg-green-100 text-green-800",
+  cancelado: "bg-red-100 text-red-800",
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  em_negociacao: "Em Negociação",
+  negociado: "Negociado",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -317,6 +332,32 @@ export default function PrecatoryShowPage() {
   }
 
   const stageStyle = STAGE_STYLES[precatory.stage] ?? "bg-gray-100 text-gray-700"
+  const statusStyle = precatory.status ? (STATUS_STYLES[precatory.status] ?? "bg-gray-100 text-gray-700") : null
+  const statusLabel = precatory.status ? (STATUS_LABELS[precatory.status] ?? precatory.status) : null
+
+  function calcGanhoEstimado() {
+    if (!precatory!.negotiated_amount_cents || !precatory!.disbursement_cents) return null
+    return precatory!.negotiated_amount_cents - precatory!.disbursement_cents - (precatory!.costs_cents ?? 0)
+  }
+
+  function calcGanhoAtualizado() {
+    if (!precatory!.current_value_cents || !precatory!.disbursement_cents) return null
+    return precatory!.current_value_cents - precatory!.disbursement_cents - (precatory!.costs_cents ?? 0)
+  }
+
+  function calcRentabilidadeEstimada() {
+    const ganho = calcGanhoEstimado()
+    const desembolsado = (precatory!.disbursement_cents ?? 0) - (precatory!.costs_cents ?? 0)
+    if (ganho == null || desembolsado <= 0) return null
+    return (ganho / desembolsado) * 100
+  }
+
+  function calcRentabilidadeAtualizada() {
+    const ganho = calcGanhoAtualizado()
+    const desembolsado = (precatory!.disbursement_cents ?? 0) - (precatory!.costs_cents ?? 0)
+    if (ganho == null || desembolsado <= 0) return null
+    return (ganho / desembolsado) * 100
+  }
 
   return (
     <>
@@ -340,9 +381,15 @@ export default function PrecatoryShowPage() {
                   <h1 className="text-2xl font-bold text-[#1a384c]">{precatory.name}</h1>
                   <p className="text-sm text-gray-500 mt-0.5">Nº {precatory.number || "—"}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stageStyle}`}>
-                  {precatory.stage}
-                </span>
+                {statusStyle && statusLabel ? (
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusStyle}`}>
+                    {statusLabel}
+                  </span>
+                ) : (
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${stageStyle}`}>
+                    {precatory.stage}
+                  </span>
+                )}
                 {precatory.priority_level && (
                   <span className={`px-3 py-1 rounded-full text-xs font-semibold ${PRIORITY_STYLES[precatory.priority_level]}`}>
                     {PRIORITY_LABELS[precatory.priority_level]}
@@ -444,21 +491,45 @@ export default function PrecatoryShowPage() {
                   <InfoRow label="Previsão de Pagamento" value={formatDate(precatory.payment_forecast_date)} />
                 </>
               )}
-              {precatory.disbursement_cents && precatory.current_value_cents && (
+              {precatory.disbursement_cents && (
                 <>
                   <Separator className="my-4" />
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs text-gray-500 uppercase tracking-wide">Lucro Estimado</span>
-                      <span className="text-base font-bold text-[#248A61]">
-                        {formatCents(
-                          precatory.current_value_cents -
-                          precatory.disbursement_cents -
-                          (precatory.costs_cents ?? 0)
-                        )}
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Ganho Estimado</span>
+                      <span className={`text-base font-bold ${(calcGanhoEstimado() ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {formatCents(calcGanhoEstimado())}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Ganho Atualizado</span>
+                      <span className={`text-base font-bold ${(calcGanhoAtualizado() ?? 0) >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                        {formatCents(calcGanhoAtualizado())}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Rent. Estimada</span>
+                      <span className="text-base font-bold text-emerald-700">
+                        {calcRentabilidadeEstimada() != null ? `${calcRentabilidadeEstimada()!.toFixed(2)}%` : "—"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">Rent. Atualizada</span>
+                      <span className="text-base font-bold text-purple-700">
+                        {calcRentabilidadeAtualizada() != null ? `${calcRentabilidadeAtualizada()!.toFixed(2)}%` : "—"}
                       </span>
                     </div>
                   </div>
+                  {precatory.percentage_of_face_value != null && (
+                    <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs text-gray-500 uppercase tracking-wide">% do Valor Requerido</span>
+                        <span className="text-base font-bold text-amber-600">
+                          {precatory.percentage_of_face_value.toFixed(2)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>

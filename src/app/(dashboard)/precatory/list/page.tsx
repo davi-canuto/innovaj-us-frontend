@@ -45,7 +45,7 @@ export default function ListPrecatory() {
 
   const columns = columnsPrecatory(setEditingPrecatory, fetchData)
 
-  const emAndamento = data.filter(p => p.stage?.toLowerCase().includes("andamento")).length
+  const emNegociacao = data.filter(p => p.stage?.toLowerCase().includes("andamento") || p.stage?.toLowerCase().includes("negociacao") || p.stage?.toLowerCase().includes("negociação") || p.status === "em_negociacao").length
   const concluidos  = data.filter(p => p.stage?.toLowerCase().includes("conclu")).length
   const valorTotal  = data.reduce((s, p) => s + (p.requested_amount ?? 0), 0)
 
@@ -91,8 +91,8 @@ export default function ListPrecatory() {
                 <Clock className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Em Andamento</p>
-                <p className="text-xl font-bold text-yellow-600">{emAndamento}</p>
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Em Negociação</p>
+                <p className="text-xl font-bold text-yellow-600">{emNegociacao}</p>
               </div>
             </div>
             <div className="bg-white border rounded-2xl p-4 flex items-center gap-3">

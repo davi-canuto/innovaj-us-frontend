@@ -19,50 +19,56 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
-export const description = "A donut chart with text"
-
 const chartConfig = {
   visitors: {
-    label: "Precatorios",
+    label: "Precatórios",
   },
-  emAndamento: {
-    label: "Em Andamento",
+  emNegociacao: {
+    label: "Em Negociação",
     color: "var(--chart-1)",
   },
-  finalizados: {
-    label: "Finalizados",
+  negociados: {
+    label: "Negociados",
     color: "var(--chart-2)",
   },
-  cancelados: {
-    label: "cancelados",
+  concluidos: {
+    label: "Concluídos",
     color: "var(--chart-3)",
+  },
+  cancelados: {
+    label: "Cancelados",
+    color: "var(--chart-4)",
   },
 } satisfies ChartConfig
 
 interface DashboardChartProps {
-  emAndamento: number
-  finalizados: number
+  emNegociacao: number
+  negociados: number
+  concluidos: number
   cancelados: number
 }
 
-export function DashboardChart({ emAndamento, finalizados, cancelados }: DashboardChartProps) {
+export function DashboardChart({ emNegociacao, negociados, concluidos, cancelados }: DashboardChartProps) {
   const chartData = [
-    { browser: "emAndamento", visitors: emAndamento, fill: "#e2e238" },
-    { browser: "finalizados", visitors: finalizados, fill: "#288f61" },
-    { browser: "cancelados", visitors: cancelados, fill: "#e28238" },
+    { browser: "emNegociacao", visitors: emNegociacao, fill: "#e2c438" },
+    { browser: "negociados",   visitors: negociados,   fill: "#6366f1" },
+    { browser: "concluidos",   visitors: concluidos,   fill: "#288f61" },
+    { browser: "cancelados",   visitors: cancelados,   fill: "#e25438" },
   ]
 
   const totalVisitors = React.useMemo(() => {
     return chartData.reduce((acc, curr) => acc + curr.visitors, 0)
-  }, [chartData])
+  }, [chartData]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Card className="flex flex-col border">
       <CardHeader className="items-center pb-0">
-        <CardTitle> <div className="text-3xl font-semibold flex items-center space-x-2">
-                <ChartPie strokeWidth={3} className=" text-[#248A61] " />
-                <h1 className=" text-[#1a384c]"> Precatórios por estágios</h1>
-              </div></CardTitle>
+        <CardTitle>
+          <div className="text-xl font-semibold flex items-center space-x-2">
+            <ChartPie strokeWidth={3} className="text-[#248A61]" />
+            <h1 className="text-[#1a384c]">Precatórios por Status</h1>
+          </div>
+        </CardTitle>
         <CardDescription>Todos os precatórios cadastrados</CardDescription>
       </CardHeader>
       <CardContent className="flex-1 pb-0">
@@ -116,12 +122,16 @@ export function DashboardChart({ emAndamento, finalizados, cancelados }: Dashboa
         </ChartContainer>
       </CardContent>
       <CardFooter className="flex-col gap-2 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs text-gray-500">
+          <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-[#e2c438]" />Em Negociação</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-[#6366f1]" />Negociados</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-[#288f61]" />Concluídos</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-full bg-[#e25438]" />Cancelados</span>
+        </div>
         <div className="flex items-center gap-2 leading-none font-medium text-[#1a384c]">
-          Distribuição por estágio <TrendingUp className="h-4 w-4" />
+          Distribuição por status <TrendingUp className="h-4 w-4" />
         </div>
-        <div className="text-muted-foreground leading-none">
-          Atualizado em tempo real
-        </div>
+        <div className="text-muted-foreground leading-none">Atualizado em tempo real</div>
       </CardFooter>
     </Card>
   )

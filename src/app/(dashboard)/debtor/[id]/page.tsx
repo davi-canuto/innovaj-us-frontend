@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { defendantsService } from "@/services/defendants"
-import { Defendant } from "@/utils/types"
+import { precatoriesService } from "@/services/precatories"
+import { Defendant, Precatory } from "@/utils/types"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -14,11 +15,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import FormDebtor from "@/components/forms/form-debtor"
-import { ArrowLeft, Pencil, Landmark, Phone, Calendar } from "lucide-react"
+import { ArrowLeft, Pencil, Landmark, Phone, Calendar, CircleDollarSign, ExternalLink } from "lucide-react"
 
 function formatDate(value?: string | null) {
   if (!value) return "—"
   return new Date(value).toLocaleDateString("pt-BR")
+}
+
+function formatCents(cents?: number | null) {
+  if (cents == null || cents === 0) return "—"
+  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | null }) {
@@ -30,11 +36,36 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
+const STATUS_LABELS: Record<string, string> = {
+  em_negociacao: "Em Negociação",
+  negociado: "Negociado",
+  concluido: "Concluído",
+  cancelado: "Cancelado",
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  em_negociacao: "bg-yellow-100 text-yellow-800",
+  negociado: "bg-indigo-100 text-indigo-800",
+  concluido: "bg-green-100 text-green-800",
+  cancelado: "bg-red-100 text-red-800",
+}
+
+function getStatus(p: Precatory): string {
+  if (p.status) return p.status
+  const stage = (p.stage ?? "").toLowerCase()
+  if (stage.includes("andamento") || stage.includes("negociacao") || stage.includes("negociação")) return "em_negociacao"
+  if (stage.includes("negociado")) return "negociado"
+  if (stage.includes("finalizado") || stage.includes("concluído") || stage.includes("concluido")) return "concluido"
+  if (stage.includes("cancelado")) return "cancelado"
+  return "em_negociacao"
+}
+
 export default function DefendantShowPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
 
   const [defendant, setDefendant] = useState<Defendant | null>(null)
+  const [precatories, setPrecatories] = useState<Precatory[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -44,6 +75,12 @@ export default function DefendantShowPage() {
     try {
       const data = await defendantsService.getById(Number(id))
       setDefendant(data)
+
+      const allPrecs = await precatoriesService.getAll()
+      const filtered = (Array.isArray(allPrecs) ? allPrecs : []).filter(
+        (p: Precatory) => p.defendant_id === Number(id)
+      )
+      setPrecatories(filtered)
     } catch {
       setNotFound(true)
     } finally {
@@ -155,6 +192,67 @@ export default function DefendantShowPage() {
           <CardContent className="pt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
             <InfoRow label="Cadastrado em" value={formatDate(defendant.created_at)} />
             <InfoRow label="Atualizado em" value={formatDate(defendant.updated_at)} />
+          </CardContent>
+        </Card>
+
+        {/* Precatórios vinculados */}
+        <Card className="border rounded-2xl bg-white">
+          <CardHeader className="border-b pb-4">
+            <CardTitle className="flex items-center gap-2 text-base font-semibold text-[#1a384c]">
+              <CircleDollarSign className="h-5 w-5 text-[#248A61]" />
+              Precatórios Vinculados
+              <span className="ml-2 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{precatories.length}</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {precatories.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-6">Nenhum precatório vinculado a este devedor.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Nome</th>
+                      <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Número</th>
+                      <th className="text-right py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Requerido</th>
+                      <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Status</th>
+                      <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Previsão Pgto</th>
+                      <th className="py-2 w-8"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {precatories.map((p) => {
+                      const status = getStatus(p)
+                      return (
+                        <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
+                          <td className="py-2 pr-4 font-medium text-[#1a384c]">{p.name}</td>
+                          <td className="py-2 pr-4 text-gray-500">{p.number || "—"}</td>
+                          <td className="py-2 pr-4 text-right font-semibold text-[#248A61]">
+                            {formatCents(p.requested_amount)}
+                          </td>
+                          <td className="py-2 pr-4">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-gray-100 text-gray-700"}`}>
+                              {STATUS_LABELS[status] ?? p.stage}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-4 text-gray-500">{formatDate(p.payment_forecast_date)}</td>
+                          <td className="py-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-gray-400 hover:text-[#1a384c]"
+                              onClick={() => router.push(`/precatory/${p.id}`)}
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </Button>
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
