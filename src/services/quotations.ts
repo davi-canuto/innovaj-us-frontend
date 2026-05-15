@@ -1,4 +1,38 @@
+import { api } from './api'
 import { Precatory, Quotation, QuotationRange } from '@/utils/types'
+
+export type QuotationFaixa = {
+  porcentagem: number
+  valor_cents: number
+}
+
+export type QuotationLinha = {
+  ano: number
+  label: string
+  faixas: QuotationFaixa[]
+}
+
+export type QuotationTabela = {
+  precatory_id: number
+  precatory_name: string
+  precatory_number: string
+  defendant_name: string | null
+  nature_of_credit: string | null
+  priority_level: string | null
+  stage: string | null
+  payment_forecast_year: number | null
+  valor_base_cents: number
+  data_base: string | null
+  tabela: QuotationLinha[]
+}
+
+export const quotationsApiService = {
+  getTabela: (precatoryId: number): Promise<QuotationTabela> =>
+    api.get(`/precatories/${precatoryId}/quotation`),
+
+  downloadPdf: (precatoryId: number, ano: number, porcentagem: number): Promise<Blob> =>
+    api.postBlob(`/precatories/${precatoryId}/quotation/pdf`, { ano, porcentagem }),
+}
 
 // Tabela de faixas de porcentagem por ano relativo
 // offset 0 (ano atual)  → 50%, 55%, 60%

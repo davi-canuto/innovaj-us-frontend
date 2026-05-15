@@ -3,7 +3,7 @@
 import { Button } from "@/components/ui/button"
 import { Precatory } from "@/utils/types"
 import { ColumnDef } from "@tanstack/react-table"
-import { Trash2, Pencil, ArrowUpDown } from "lucide-react"
+import { Trash2, Pencil, ArrowUpDown, Paperclip } from "lucide-react"
 import { toast } from "sonner"
 import { precatoriesService } from "@/services/precatories"
 
@@ -36,10 +36,12 @@ function PrecatoryActions({
   precatory,
   onEdit,
   onDeleted,
+  onAttachments,
 }: {
   precatory: Precatory
   onEdit: (p: Precatory) => void
   onDeleted: () => void
+  onAttachments?: (p: Precatory) => void
 }) {
   const handleDelete = async (e: React.MouseEvent) => {
     e.stopPropagation()
@@ -55,6 +57,17 @@ function PrecatoryActions({
 
   return (
     <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+      {onAttachments && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 hover:bg-emerald-50 hover:text-emerald-600"
+          onClick={(e) => { e.stopPropagation(); onAttachments(precatory) }}
+          title="Anexos"
+        >
+          <Paperclip className="h-3.5 w-3.5" />
+        </Button>
+      )}
       <Button
         variant="ghost"
         size="icon"
@@ -80,6 +93,7 @@ function PrecatoryActions({
 export function columnsPrecatory(
   onEdit: (precatory: Precatory) => void,
   onDeleted?: () => void,
+  onAttachments?: (precatory: Precatory) => void,
 ): ColumnDef<Precatory>[] {
   return [
     {
@@ -200,6 +214,7 @@ export function columnsPrecatory(
           precatory={row.original}
           onEdit={onEdit}
           onDeleted={onDeleted ?? (() => window.location.reload())}
+          onAttachments={onAttachments}
         />
       ),
     },

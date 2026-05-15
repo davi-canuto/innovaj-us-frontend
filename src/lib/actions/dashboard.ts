@@ -1,6 +1,7 @@
 'use server'
 
 import { getToken, clearSessionAndRedirect } from './auth'
+import type { PortfolioSummary, RecebimentoPorAno } from '@/utils/types'
 
 const API_URL = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL
 
@@ -11,14 +12,12 @@ export interface DashboardStats {
   concluidos: number
   cancelados: number
   totalRpvs: number
-  // Financeiro
-  valorTotalCarteira: number    // ganhoAtualizado + desembolsadoTotal
-  desembolsadoTotal: number     // soma de disbursement - costs de todas as negociações
-  ganhoEstimado: number         // negotiated_amount - disbursement - costs
-  ganhoAtualizado: number       // current_value - disbursement - costs
+  valorTotalCarteira: number
+  desembolsadoTotal: number
+  ganhoEstimado: number
+  ganhoAtualizado: number
   totalNegociacoes: number
-  // Previsão por ano (4 anos a partir do atual)
-  previsaoPorAno: { year: number; valor: number }[]
+  previsaoPorAno: { year: number; valor: number; ganhoEstimado: number; ganhoAtualizado: number; quantidade: number }[]
 }
 
 export interface ChartData {
@@ -28,12 +27,34 @@ export interface ChartData {
   cancelados: number
 }
 
+async function fetchPortfolio(): Promise<PortfolioSummary> {
+  const token = await getToken()
+
+  const response = await fetch(`${API_URL}/dashboard/portfolio`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+  })
+
+  if (response.status === 401) {
+    await clearSessionAndRedirect()
+  }
+
+  if (!response.ok) {
+    throw new Error(`Dashboard portfolio error: ${response.status}`)
+  }
+
+  return response.json()
+}
+
 async function fetchPrecatories() {
   const token = await getToken()
 
   const response = await fetch(`${API_URL}/precatories`, {
     headers: {
-      'Authorization': `Bearer ${token}`,
+      Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
     cache: 'no-store',
@@ -46,70 +67,27 @@ async function fetchPrecatories() {
   return response.json()
 }
 
-function getStatus(p: any): string {
-  // Usa campo status novo se existir, senão cai para stage legado
-  if (p.status) return p.status
-  const stage = (p.stage ?? '').toLowerCase()
-  if (stage.includes('andamento') || stage.includes('negociacao') || stage.includes('negociação')) return 'em_negociacao'
-  if (stage.includes('negociado')) return 'negociado'
-  if (stage.includes('finalizado') || stage.includes('concluído') || stage.includes('concluido')) return 'concluido'
-  if (stage.includes('cancelado')) return 'cancelado'
-  return 'em_negociacao'
-}
-
-function buildStats(precatories: any[]): DashboardStats {
-  const currentYear = new Date().getFullYear()
-
-  const negociacoes = precatories.filter((p: any) => p.is_negotiated)
-
-  // Desembolsado = disbursement - costs (valor líquido investido)
-  const desembolsadoTotal = negociacoes.reduce((acc: number, p: any) => {
-    const desembolso = (p.disbursement_cents || 0) - (p.costs_cents || 0)
-    return acc + Math.max(0, desembolso)
-  }, 0)
-
-  // Ganho Estimado = negotiated_amount - disbursement - costs
-  const ganhoEstimado = negociacoes.reduce((acc: number, p: any) => {
-    if (!p.negotiated_amount_cents || !p.disbursement_cents) return acc
-    return acc + p.negotiated_amount_cents - p.disbursement_cents - (p.costs_cents ?? 0)
-  }, 0)
-
-  // Ganho Atualizado = current_value - disbursement - costs
-  const ganhoAtualizado = negociacoes.reduce((acc: number, p: any) => {
-    if (!p.current_value_cents || !p.disbursement_cents) return acc
-    return acc + p.current_value_cents - p.disbursement_cents - (p.costs_cents ?? 0)
-  }, 0)
-
-  // Valor Total da Carteira = ganho atualizado + desembolsado total
-  const valorTotalCarteira = ganhoAtualizado + desembolsadoTotal
-
-  // Previsão por ano: agrupa precatórios pelo ano de previsão de pagamento
-  const previsaoPorAno = [0, 1, 2, 3].map((offset) => {
-    const year = currentYear + offset
-    const valor = negociacoes
-      .filter((p: any) => {
-        if (p.payment_forecast_year) return p.payment_forecast_year === year
-        if (p.payment_forecast_date) {
-          return new Date(p.payment_forecast_date).getFullYear() === year
-        }
-        return false
-      })
-      .reduce((acc: number, p: any) => acc + (p.current_value_cents || p.negotiated_amount_cents || 0), 0)
-    return { year, valor }
-  })
+function portfolioToStats(portfolio: PortfolioSummary): DashboardStats {
+  const previsaoPorAno = portfolio.recebimentos_por_ano.map((r) => ({
+    year: r.ano,
+    valor: r.valor_total_cents,
+    ganhoEstimado: r.ganho_estimado_total_cents,
+    ganhoAtualizado: r.ganho_atualizado_total_cents,
+    quantidade: r.quantidade,
+  }))
 
   return {
-    total: precatories.length,
-    emNegociacao: precatories.filter((p: any) => getStatus(p) === 'em_negociacao').length,
-    negociados: precatories.filter((p: any) => getStatus(p) === 'negociado').length,
-    concluidos: precatories.filter((p: any) => getStatus(p) === 'concluido').length,
-    cancelados: precatories.filter((p: any) => getStatus(p) === 'cancelado').length,
-    totalRpvs: precatories.filter((p: any) => p.is_rpv).length,
-    valorTotalCarteira,
-    desembolsadoTotal,
-    ganhoEstimado,
-    ganhoAtualizado,
-    totalNegociacoes: negociacoes.length,
+    total: portfolio.total_precatories,
+    totalRpvs: portfolio.total_rpvs,
+    emNegociacao: 0,
+    negociados: 0,
+    concluidos: 0,
+    cancelados: 0,
+    totalNegociacoes: 0,
+    valorTotalCarteira: portfolio.valor_total_carteira_cents,
+    desembolsadoTotal: portfolio.valor_desembolsado_total_cents,
+    ganhoEstimado: portfolio.ganho_estimado_total_cents,
+    ganhoAtualizado: portfolio.ganho_atualizado_total_cents,
     previsaoPorAno,
   }
 }
@@ -129,17 +107,48 @@ const EMPTY_STATS: DashboardStats = {
   previsaoPorAno: [],
 }
 
+export async function getPortfolioYears(): Promise<RecebimentoPorAno[]> {
+  try {
+    const token = await getToken()
+
+    const response = await fetch(`${API_URL}/dashboard/portfolio/years`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    })
+
+    if (!response.ok) return []
+
+    const data: PortfolioSummary = await response.json()
+    return data.recebimentos_por_ano ?? []
+  } catch {
+    return []
+  }
+}
+
 export async function getDashboardData(): Promise<{ stats: DashboardStats; chart: ChartData; precatories: any[] }> {
   try {
-    const precatories = await fetchPrecatories()
-    const stats = buildStats(precatories)
+    const [portfolio, precatories] = await Promise.all([fetchPortfolio(), fetchPrecatories()])
+    const baseStats = portfolioToStats(portfolio)
 
-    const chart: ChartData = {
-      emNegociacao: stats.emNegociacao,
-      negociados: stats.negociados,
-      concluidos: stats.concluidos,
-      cancelados: stats.cancelados,
+    const emNegociacao = (precatories as any[]).filter((p) => p.status === 'em_negociacao').length
+    const negociados = (precatories as any[]).filter((p) => p.status === 'negociado').length
+    const concluidos = (precatories as any[]).filter((p) => p.status === 'concluido').length
+    const cancelados = (precatories as any[]).filter((p) => p.status === 'cancelado').length
+    const totalNegociacoes = (precatories as any[]).filter((p) => p.is_negotiated).length
+
+    const stats: DashboardStats = {
+      ...baseStats,
+      emNegociacao,
+      negociados,
+      concluidos,
+      cancelados,
+      totalNegociacoes,
     }
+
+    const chart: ChartData = { emNegociacao, negociados, concluidos, cancelados }
 
     return { stats, chart, precatories }
   } catch (error) {
@@ -154,8 +163,16 @@ export async function getDashboardData(): Promise<{ stats: DashboardStats; chart
 
 export async function getDashboardStats(): Promise<DashboardStats> {
   try {
-    const precatories = await fetchPrecatories()
-    return buildStats(precatories)
+    const [portfolio, precatories] = await Promise.all([fetchPortfolio(), fetchPrecatories()])
+    const baseStats = portfolioToStats(portfolio)
+
+    const emNegociacao = (precatories as any[]).filter((p) => p.status === 'em_negociacao').length
+    const negociados = (precatories as any[]).filter((p) => p.status === 'negociado').length
+    const concluidos = (precatories as any[]).filter((p) => p.status === 'concluido').length
+    const cancelados = (precatories as any[]).filter((p) => p.status === 'cancelado').length
+    const totalNegociacoes = (precatories as any[]).filter((p) => p.is_negotiated).length
+
+    return { ...baseStats, emNegociacao, negociados, concluidos, cancelados, totalNegociacoes }
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
     return EMPTY_STATS
@@ -165,12 +182,11 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 export async function getChartData(): Promise<ChartData> {
   try {
     const precatories = await fetchPrecatories()
-    const stats = buildStats(precatories)
     return {
-      emNegociacao: stats.emNegociacao,
-      negociados: stats.negociados,
-      concluidos: stats.concluidos,
-      cancelados: stats.cancelados,
+      emNegociacao: (precatories as any[]).filter((p) => p.status === 'em_negociacao').length,
+      negociados: (precatories as any[]).filter((p) => p.status === 'negociado').length,
+      concluidos: (precatories as any[]).filter((p) => p.status === 'concluido').length,
+      cancelados: (precatories as any[]).filter((p) => p.status === 'cancelado').length,
     }
   } catch (error) {
     console.error('Error fetching chart data:', error)

@@ -136,6 +136,12 @@ export const api = {
       body: JSON.stringify(data),
     }),
 
+  patch: (endpoint: string, data: unknown) =>
+    request(endpoint, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+
   delete: (endpoint: string) => request(endpoint, { method: "DELETE" }),
 
   postFormData: (endpoint: string, formData: FormData) =>
@@ -143,4 +149,23 @@ export const api = {
       method: "POST",
       body: formData,
     }),
+
+  postBlob: async (endpoint: string, data: unknown): Promise<Blob> => {
+    const url = `${API_BASE_URL}${endpoint}`
+    const token = getTokenFromCookie()
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` }),
+      },
+      body: JSON.stringify(data),
+    })
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ message: `Erro ${response.status}` }))
+      throw new Error(error.message || error.error || `Erro ${response.status}`)
+    }
+    return response.blob()
+  },
 }

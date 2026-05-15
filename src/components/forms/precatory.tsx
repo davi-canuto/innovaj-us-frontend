@@ -25,6 +25,7 @@ import { petitionersService } from "@/services/petitioners";
 import { defendantsService } from "@/services/defendants";
 import { useRouter } from "next/navigation";
 import { Precatory, Petitioner, Defendant } from "@/utils/types";
+import { PRECATORY_STATUS_OPTIONS } from "@/utils/status";
 
 const FormSchema = z.object({
     name: z.string().min(1, "Nome é obrigatório"),
@@ -37,23 +38,19 @@ const FormSchema = z.object({
     proposal_year: z.string().min(1, "Ano da proposta é obrigatório"),
     requested_amount: z.string().min(1, "Valor requerido é obrigatório"),
     inclusion_source: z.string().min(1, "Fonte de inclusão é obrigatória"),
-    stage: z.string().min(1, "Estágio é obrigatório"),
-    status: z.string().optional(),
+    status: z.enum(["em_negociacao", "negociado", "concluido", "cancelado"]).optional(),
     petitioner_id: z.string().optional(),
     defendant_id: z.string().optional(),
-    // Processos
     filing_date: z.date().optional(),
     administrative_process: z.string().optional(),
     pje_process: z.string().optional(),
-    // Honorários
     fee_percentage: z.string().optional(),
+    fee_spreadsheet_percentage: z.string().optional(),
     has_contract: z.boolean().optional(),
-    // RPV
     is_rpv: z.boolean().optional(),
     rpv_amount_cents: z.string().optional(),
     succumbence_fee_cents: z.string().optional(),
     contractual_fee_cents: z.string().optional(),
-    // Negociação
     is_negotiated: z.boolean().optional(),
     negotiated_amount_cents: z.string().optional(),
     disbursement_cents: z.string().optional(),
@@ -103,14 +100,14 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
             proposal_year: defaultValues?.proposal_year?.toString() ?? "",
             requested_amount: defaultValues?.requested_amount ? (defaultValues.requested_amount / 100).toFixed(2) : "",
             inclusion_source: defaultValues?.inclusion_source ?? "",
-            stage: defaultValues?.stage ?? "",
-            status: defaultValues?.status ?? "",
+            status: defaultValues?.status ?? undefined,
             petitioner_id: defaultValues?.petitioner_id?.toString() ?? "",
             defendant_id: defaultValues?.defendant_id?.toString() ?? "",
             filing_date: defaultValues?.filing_date ? new Date(defaultValues.filing_date) : undefined,
             administrative_process: defaultValues?.administrative_process ?? "",
             pje_process: defaultValues?.pje_process ?? "",
             fee_percentage: defaultValues?.fee_percentage?.toString() ?? "",
+            fee_spreadsheet_percentage: defaultValues?.fee_spreadsheet_percentage?.toString() ?? "",
             has_contract: defaultValues?.has_contract ?? false,
             is_rpv: defaultValues?.is_rpv ?? false,
             rpv_amount_cents: centsToString(defaultValues?.rpv_amount_cents),
@@ -140,7 +137,6 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                 proposal_year: parseInt(data.proposal_year),
                 requested_amount: Math.round(parseFloat(data.requested_amount) * 100),
                 inclusion_source: data.inclusion_source,
-                stage: data.stage,
                 status: data.status || undefined,
                 petitioner_id: data.petitioner_id ? parseInt(data.petitioner_id) : undefined,
                 defendant_id: data.defendant_id ? parseInt(data.defendant_id) : undefined,
@@ -148,6 +144,7 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                 administrative_process: data.administrative_process || undefined,
                 pje_process: data.pje_process || undefined,
                 fee_percentage: data.fee_percentage ? parseFloat(data.fee_percentage) : undefined,
+                fee_spreadsheet_percentage: data.fee_spreadsheet_percentage ? parseFloat(data.fee_spreadsheet_percentage) : undefined,
                 has_contract: data.has_contract,
                 is_rpv: data.is_rpv,
                 is_negotiated: data.is_negotiated,
@@ -299,25 +296,9 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                                 <Select onValueChange={field.onChange} value={field.value || ""}>
                                     <SelectTrigger><SelectValue placeholder="Selecione o status" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="em_negociacao">Em Negociação</SelectItem>
-                                        <SelectItem value="negociado">Negociado</SelectItem>
-                                        <SelectItem value="concluido">Concluído</SelectItem>
-                                        <SelectItem value="cancelado">Cancelado</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                                <FormMessage />
-                            </FormItem>
-                        )} />
-                        <FormField control={form.control} name="stage" render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Estágio (legado) *</FormLabel>
-                                <Select onValueChange={field.onChange} value={field.value || ""}>
-                                    <SelectTrigger><SelectValue placeholder="Selecione o estágio" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="Em negociação">Em negociação</SelectItem>
-                                        <SelectItem value="Concluído">Concluído</SelectItem>
-                                        <SelectItem value="Cancelado">Cancelado</SelectItem>
-                                        <SelectItem value="Pendente">Pendente</SelectItem>
+                                        {PRECATORY_STATUS_OPTIONS.map((opt) => (
+                                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                                        ))}
                                     </SelectContent>
                                 </Select>
                                 <FormMessage />
@@ -361,6 +342,15 @@ export default function PrecatoryForm({ redirectOnSuccess = false, defaultValues
                                 <FormMessage />
                             </FormItem>
                         )} />
+                        <FormField control={form.control} name="fee_spreadsheet_percentage" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Honorários Planilha (%)</FormLabel>
+                                <FormControl><Input placeholder="20" {...field} type="number" step="0.01" min="0" max="100" /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )} />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <FormField control={form.control} name="has_contract" render={({ field }) => (
                             <FormItem className="flex flex-col justify-end pb-1">
                                 <FormLabel>Contrato</FormLabel>

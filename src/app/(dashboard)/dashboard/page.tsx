@@ -1,8 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getDashboardData } from "@/lib/actions/dashboard"
+import { getDashboardData, getPortfolioYears } from "@/lib/actions/dashboard"
 import type { DashboardStats, ChartData } from "@/lib/actions/dashboard"
+import type { RecebimentoPorAno } from "@/utils/types"
 import { DashboardChart } from "@/components/layout/dashboard-chart"
 import { DashboardPrecatoryTable } from "@/components/layout/dashboard-precatory-table"
 import {
@@ -65,53 +66,70 @@ function StatCard({
 function CarteiraTotalModal({
   open,
   onClose,
-  stats,
 }: {
   open: boolean
   onClose: () => void
-  stats: DashboardStats
 }) {
-  const currentYear = new Date().getFullYear()
-  const anos = [0, 1, 2, 3].map((offset) => {
-    const year = currentYear + offset
-    const entry = stats.previsaoPorAno.find((p) => p.year === year)
-    return { year, valorTotal: entry?.valor ?? 0 }
-  })
+  const [anos, setAnos] = useState<RecebimentoPorAno[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setLoading(true)
+    getPortfolioYears()
+      .then(setAnos)
+      .catch(() => setAnos([]))
+      .finally(() => setLoading(false))
+  }, [open])
+
+  const totalValor = anos.reduce((s, a) => s + a.valor_total_cents, 0)
+  const totalGanhoEst = anos.reduce((s, a) => s + a.ganho_estimado_total_cents, 0)
+  const totalGanhoAtual = anos.reduce((s, a) => s + a.ganho_atualizado_total_cents, 0)
+  const totalQtd = anos.reduce((s, a) => s + a.quantidade, 0)
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-[#1a384c]">Relatório da Carteira por Ano</DialogTitle>
         </DialogHeader>
-        <div className="overflow-x-auto mt-2">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ano</th>
-                <th className="text-right py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Recebimento Previsto</th>
-                <th className="text-right py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Estimado</th>
-                <th className="text-right py-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Atualizado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {anos.map(({ year, valorTotal }) => (
-                <tr key={year} className="border-b last:border-0 hover:bg-gray-50">
-                  <td className="py-3 pr-4 font-semibold text-[#1a384c]">{year}</td>
-                  <td className="py-3 pr-4 text-right text-[#248A61] font-semibold">{formatCents(valorTotal)}</td>
-                  <td className="py-3 pr-4 text-right text-emerald-600 font-semibold">{formatCents(stats.ganhoEstimado)}</td>
-                  <td className="py-3 text-right text-indigo-600 font-semibold">{formatCents(stats.ganhoAtualizado)}</td>
+        {loading ? (
+          <p className="text-sm text-gray-400 py-8 text-center">Carregando...</p>
+        ) : anos.length === 0 ? (
+          <p className="text-sm text-gray-400 py-8 text-center">Nenhum dado disponível.</p>
+        ) : (
+          <div className="overflow-x-auto mt-2">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ano</th>
+                  <th className="text-right py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Recebimento</th>
+                  <th className="text-right py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Estimado</th>
+                  <th className="text-right py-3 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Atualizado</th>
+                  <th className="text-right py-3 text-xs text-gray-500 uppercase tracking-wide font-medium">Qtd</th>
                 </tr>
-              ))}
-              <tr className="border-t-2 bg-gray-50">
-                <td className="py-3 pr-4 font-bold text-[#1a384c]">Total</td>
-                <td className="py-3 pr-4 text-right font-bold text-[#248A61]">{formatCents(anos.reduce((s, a) => s + a.valorTotal, 0))}</td>
-                <td className="py-3 pr-4 text-right font-bold text-emerald-600">{formatCents(stats.ganhoEstimado)}</td>
-                <td className="py-3 text-right font-bold text-indigo-600">{formatCents(stats.ganhoAtualizado)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {anos.map((r) => (
+                  <tr key={r.ano} className="border-b last:border-0 hover:bg-gray-50">
+                    <td className="py-3 pr-4 font-semibold text-[#1a384c]">{r.ano}</td>
+                    <td className="py-3 pr-4 text-right text-[#248A61] font-semibold">{formatCents(r.valor_total_cents)}</td>
+                    <td className="py-3 pr-4 text-right text-emerald-600 font-semibold">{formatCents(r.ganho_estimado_total_cents)}</td>
+                    <td className="py-3 pr-4 text-right text-indigo-600 font-semibold">{formatCents(r.ganho_atualizado_total_cents)}</td>
+                    <td className="py-3 text-right text-gray-600">{r.quantidade}</td>
+                  </tr>
+                ))}
+                <tr className="border-t-2 bg-gray-50">
+                  <td className="py-3 pr-4 font-bold text-[#1a384c]">Total</td>
+                  <td className="py-3 pr-4 text-right font-bold text-[#248A61]">{formatCents(totalValor)}</td>
+                  <td className="py-3 pr-4 text-right font-bold text-emerald-600">{formatCents(totalGanhoEst)}</td>
+                  <td className="py-3 pr-4 text-right font-bold text-indigo-600">{formatCents(totalGanhoAtual)}</td>
+                  <td className="py-3 text-right font-bold text-gray-600">{totalQtd}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
       </DialogContent>
     </Dialog>
   )
@@ -304,7 +322,7 @@ export default function DashboardPage() {
       )}
 
       {/* Modal relatório */}
-      <CarteiraTotalModal open={modalOpen} onClose={() => setModalOpen(false)} stats={stats} />
+      <CarteiraTotalModal open={modalOpen} onClose={() => setModalOpen(false)} />
     </div>
   )
 }

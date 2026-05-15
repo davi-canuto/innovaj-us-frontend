@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
+import { AttachmentsPanel } from "@/components/precatory/AttachmentsPanel"
 
 function formatCents(cents: number) {
   return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -28,6 +29,7 @@ export default function ListPrecatory() {
   const [data, setData] = useState<Precatory[]>([])
   const [loading, setLoading] = useState(true)
   const [editingPrecatory, setEditingPrecatory] = useState<Precatory | null>(null)
+  const [attachmentsPrecatory, setAttachmentsPrecatory] = useState<Precatory | null>(null)
 
   const fetchData = useCallback(async () => {
     setLoading(true)
@@ -43,7 +45,7 @@ export default function ListPrecatory() {
 
   useEffect(() => { fetchData() }, [fetchData])
 
-  const columns = columnsPrecatory(setEditingPrecatory, fetchData)
+  const columns = columnsPrecatory(setEditingPrecatory, fetchData, setAttachmentsPrecatory)
 
   const emNegociacao = data.filter(p => p.stage?.toLowerCase().includes("andamento") || p.stage?.toLowerCase().includes("negociacao") || p.stage?.toLowerCase().includes("negociação") || p.status === "em_negociacao").length
   const concluidos  = data.filter(p => p.stage?.toLowerCase().includes("conclu")).length
@@ -137,6 +139,16 @@ export default function ListPrecatory() {
           </div>
         </div>
       </div>
+
+      {/* Painel de anexos */}
+      {attachmentsPrecatory && (
+        <AttachmentsPanel
+          precatoryId={attachmentsPrecatory.id}
+          precatoryName={attachmentsPrecatory.name}
+          open={!!attachmentsPrecatory}
+          onClose={() => setAttachmentsPrecatory(null)}
+        />
+      )}
 
       {/* Dialog edição */}
       <Dialog

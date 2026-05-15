@@ -10,6 +10,17 @@ npm run build
 npm run start
 ```
 
+## Restrições de segurança (obrigatórias em todas as sessões)
+
+- **Nunca executar `git push`** — commits locais são permitidos, push nunca
+- **Nunca modificar arquivos `.env.production` ou qualquer `.env` que aponte para produção**
+- **API_URL deve sempre ser `http://localhost:3001`** — nunca alterar para URL remota
+- **Nunca rodar `npm run start`** (servidor de produção) — usar apenas `npm run dev`
+- **Nunca fazer deploy** (Vercel, Railway, Fly, etc.) via CLI ou script
+- **Nunca criar ou modificar configurações de CI/CD** (`.github/workflows/`, `vercel.json`, etc.)
+
+Se qualquer comando tocaria em infraestrutura remota ou produção, parar e perguntar antes.
+
 ## Stack
 
 - **Next.js 16** com App Router e Server Actions

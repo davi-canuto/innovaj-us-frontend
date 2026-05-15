@@ -11,7 +11,6 @@ export type Precatory = {
   requested_amount: number
   inclusion_source: string
   stage: string
-  // Novo campo de status (substitui stage para fluxo de negociação)
   status?: PrecatoryStatus
   base_date_update?: string
   nature_of_credit?: string
@@ -25,22 +24,18 @@ export type Precatory = {
   value_interest_cents?: number
   value_costs_cents?: number
   user_id?: number
-  // Fila / processos
   filing_date?: string
   administrative_process?: string
   pje_process?: string
-  // Honorários
   fee_percentage?: number
   fee_amount_cents?: number
+  fee_spreadsheet_percentage?: number | null
   has_contract?: boolean
-  // Porcentagem do valor negociado sobre o face value
   percentage_of_face_value?: number
-  // RPV
   is_rpv?: boolean
   rpv_amount_cents?: number
   succumbence_fee_cents?: number
   contractual_fee_cents?: number
-  // Negociação
   is_negotiated?: boolean
   negotiated_amount_cents?: number
   disbursement_cents?: number
@@ -50,14 +45,11 @@ export type Precatory = {
   position_at_purchase?: number
   last_updated_date?: string
   current_value_cents?: number
-  // Ganho atualizado (current_value - disbursement - costs)
-  ganho_atualizado_cents?: number
-  // Data de atualização do valor atual
-  data_atualizacao_valor?: string
-  // Rentabilidades calculadas
-  rentabilidade_estimada?: number
-  rentabilidade_atualizada?: number
-  // Campo calculado pelo backend
+  ganho_estimado_cents?: number | null
+  ganho_atualizado_cents?: number | null
+  rentabilidade_estimada?: number | null
+  rentabilidade_atualizada?: number | null
+  data_atualizacao?: string | null
   priority_level?: 'super' | 'alimentar' | 'comum'
   last_value_history?: PrecatoryValueHistory
   value_histories?: PrecatoryValueHistory[]
@@ -65,6 +57,48 @@ export type Precatory = {
   defendant?: Defendant
   created_at: string
   updated_at: string
+}
+
+export type PrecatoryDocument = {
+  id: number
+  file_name: string
+  file_type: string
+  file_size: number
+  uploaded_by: number
+  created_at: string
+  download_url: string
+}
+
+export type QuotationBackend = {
+  id: number
+  precatory_id: number
+  generated_at: string
+  items: QuotationItem[]
+  pdf_url: string
+}
+
+export type QuotationItem = {
+  year_offset: number
+  percentage: number
+  calculated_value_cents: number
+}
+
+export type PortfolioSummary = {
+  total_precatories: number
+  total_rpvs: number
+  valor_desembolsado_total_cents: number
+  ganho_estimado_total_cents: number
+  ganho_atualizado_total_cents: number
+  valor_total_carteira_cents: number
+  recebimentos_por_ano: RecebimentoPorAno[]
+}
+
+export type RecebimentoPorAno = {
+  ano: number
+  valor_total_cents: number
+  ganho_estimado_total_cents: number
+  ganho_atualizado_total_cents: number
+  quantidade: number
 }
 
 export type PrecatoryValueHistory = {
@@ -131,8 +165,19 @@ export type Defendant = {
   code?: string
   phone?: string
   email?: string
+  precatories?: Precatory[]
   created_at: string
   updated_at: string
+}
+
+export type PrecatoryAttachment = {
+  id: number
+  display_name: string
+  content_type: string
+  byte_size: number
+  created_at: string
+  file_url: string
+  download_url: string
 }
 
 export type Organization = {

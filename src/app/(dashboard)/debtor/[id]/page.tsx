@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog"
 import FormDebtor from "@/components/forms/form-debtor"
 import { ArrowLeft, Pencil, Landmark, Phone, Calendar, CircleDollarSign, ExternalLink } from "lucide-react"
+import { STATUS_LABELS, STATUS_STYLES } from "@/utils/status"
 
 function formatDate(value?: string | null) {
   if (!value) return "—"
@@ -36,30 +37,6 @@ function InfoRow({ label, value }: { label: string; value?: string | null }) {
   )
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  em_negociacao: "Em Negociação",
-  negociado: "Negociado",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  em_negociacao: "bg-yellow-100 text-yellow-800",
-  negociado: "bg-indigo-100 text-indigo-800",
-  concluido: "bg-green-100 text-green-800",
-  cancelado: "bg-red-100 text-red-800",
-}
-
-function getStatus(p: Precatory): string {
-  if (p.status) return p.status
-  const stage = (p.stage ?? "").toLowerCase()
-  if (stage.includes("andamento") || stage.includes("negociacao") || stage.includes("negociação")) return "em_negociacao"
-  if (stage.includes("negociado")) return "negociado"
-  if (stage.includes("finalizado") || stage.includes("concluído") || stage.includes("concluido")) return "concluido"
-  if (stage.includes("cancelado")) return "cancelado"
-  return "em_negociacao"
-}
-
 export default function DefendantShowPage() {
   const { id } = useParams<{ id: string }>()
   const router = useRouter()
@@ -73,14 +50,12 @@ export default function DefendantShowPage() {
   async function load() {
     setLoading(true)
     try {
-      const data = await defendantsService.getById(Number(id))
+      const [data, precs] = await Promise.all([
+        defendantsService.getById(Number(id)),
+        precatoriesService.getAll({ defendant_id: id }),
+      ])
       setDefendant(data)
-
-      const allPrecs = await precatoriesService.getAll()
-      const filtered = (Array.isArray(allPrecs) ? allPrecs : []).filter(
-        (p: Precatory) => p.defendant_id === Number(id)
-      )
-      setPrecatories(filtered)
+      setPrecatories(Array.isArray(precs) ? precs : [])
     } catch {
       setNotFound(true)
     } finally {
@@ -214,28 +189,30 @@ export default function DefendantShowPage() {
                     <tr className="border-b">
                       <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Nome</th>
                       <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Número</th>
-                      <th className="text-right py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Requerido</th>
                       <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Status</th>
-                      <th className="text-left py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Previsão Pgto</th>
+                      <th className="text-right py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Valor Atual</th>
+                      <th className="text-right py-2 pr-4 text-xs text-gray-500 uppercase tracking-wide font-medium">Ganho Estimado</th>
                       <th className="py-2 w-8"></th>
                     </tr>
                   </thead>
                   <tbody>
                     {precatories.map((p) => {
-                      const status = getStatus(p)
+                      const status = p.status ?? ""
                       return (
                         <tr key={p.id} className="border-b last:border-0 hover:bg-gray-50">
                           <td className="py-2 pr-4 font-medium text-[#1a384c]">{p.name}</td>
                           <td className="py-2 pr-4 text-gray-500">{p.number || "—"}</td>
-                          <td className="py-2 pr-4 text-right font-semibold text-[#248A61]">
-                            {formatCents(p.requested_amount)}
-                          </td>
                           <td className="py-2 pr-4">
                             <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_STYLES[status] ?? "bg-gray-100 text-gray-700"}`}>
                               {STATUS_LABELS[status] ?? p.stage}
                             </span>
                           </td>
-                          <td className="py-2 pr-4 text-gray-500">{formatDate(p.payment_forecast_date)}</td>
+                          <td className="py-2 pr-4 text-right font-semibold text-[#248A61]">
+                            {formatCents(p.current_value_cents)}
+                          </td>
+                          <td className="py-2 pr-4 text-right font-semibold text-emerald-600">
+                            {formatCents(p.ganho_estimado_cents)}
+                          </td>
                           <td className="py-2">
                             <Button
                               variant="ghost"

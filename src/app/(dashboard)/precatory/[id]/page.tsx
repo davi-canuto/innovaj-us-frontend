@@ -7,6 +7,8 @@ import { petitionersService } from "@/services/petitioners"
 import { defendantsService } from "@/services/defendants"
 import { valueHistoriesService } from "@/services/valueHistories"
 import { Precatory, Petitioner, Defendant, PrecatoryValueHistory } from "@/utils/types"
+import { AttachmentsPanel } from "@/components/precatory/AttachmentsPanel"
+import { ModalCotacao } from "@/components/precatory/ModalCotacao"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -33,7 +35,9 @@ import {
   Plus,
   Trash2,
   TrendingUp,
+  Paperclip,
 } from "lucide-react"
+import { STATUS_LABELS, STATUS_STYLES } from "@/utils/status"
 
 const INCLUSION_SOURCE_LABELS: Record<string, string> = {
   court_order: "Ordem Judicial",
@@ -48,20 +52,6 @@ const STAGE_STYLES: Record<string, string> = {
   "Concluído": "bg-green-100 text-green-800",
   "Cancelado": "bg-red-100 text-red-800",
   "Pendente": "bg-gray-100 text-gray-700",
-}
-
-const STATUS_STYLES: Record<string, string> = {
-  em_negociacao: "bg-yellow-100 text-yellow-800",
-  negociado: "bg-indigo-100 text-indigo-800",
-  concluido: "bg-green-100 text-green-800",
-  cancelado: "bg-red-100 text-red-800",
-}
-
-const STATUS_LABELS: Record<string, string> = {
-  em_negociacao: "Em Negociação",
-  negociado: "Negociado",
-  concluido: "Concluído",
-  cancelado: "Cancelado",
 }
 
 const PRIORITY_STYLES: Record<string, string> = {
@@ -286,6 +276,8 @@ export default function PrecatoryShowPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [editing, setEditing] = useState(false)
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false)
+  const [cotacaoOpen, setCotacaoOpen] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -403,13 +395,33 @@ export default function PrecatoryShowPage() {
                 )}
               </div>
             </div>
-            <Button
-              className="bg-[#1a384c] text-white hover:bg-[#1a384c]/90 shrink-0"
-              onClick={() => setEditing(true)}
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </Button>
+            <div className="flex items-center gap-2 shrink-0">
+              {precatory.status === "em_negociacao" &&
+                (precatory.last_value_history != null || precatory.current_value_cents != null) && (
+                <Button
+                  variant="outline"
+                  className="border-[#248A61] text-[#248A61] hover:bg-[#248A61]/5"
+                  onClick={() => setCotacaoOpen(true)}
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  Gerar Cotação
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => setAttachmentsOpen(true)}
+              >
+                <Paperclip className="mr-2 h-4 w-4" />
+                Anexos
+              </Button>
+              <Button
+                className="bg-[#1a384c] text-white hover:bg-[#1a384c]/90"
+                onClick={() => setEditing(true)}
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -436,12 +448,15 @@ export default function PrecatoryShowPage() {
               <InfoRow label="Juros" value={formatCents(precatory.value_interest_cents)} />
               <InfoRow label="Custas" value={formatCents(precatory.value_costs_cents)} />
             </div>
-            {(precatory.fee_percentage != null || precatory.has_contract != null) && (
+            {(precatory.fee_percentage != null || precatory.fee_spreadsheet_percentage != null || precatory.has_contract != null) && (
               <>
                 <Separator className="my-4" />
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                   {precatory.fee_percentage != null && (
-                    <InfoRow label="Honorários (%)" value={`${precatory.fee_percentage}%`} />
+                    <InfoRow label="Honorários Contratuais (%)" value={`${precatory.fee_percentage}%`} />
+                  )}
+                  {precatory.fee_spreadsheet_percentage != null && (
+                    <InfoRow label="Honorários Planilha (%)" value={`${precatory.fee_spreadsheet_percentage}%`} />
                   )}
                   <InfoRow label="Contrato" value={precatory.has_contract ? "Sim" : "Não"} />
                 </div>
@@ -497,29 +512,46 @@ export default function PrecatoryShowPage() {
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-500 uppercase tracking-wide">Ganho Estimado</span>
-                      <span className={`text-base font-bold ${(calcGanhoEstimado() ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
-                        {formatCents(calcGanhoEstimado())}
+                      <span className={`text-base font-bold ${(precatory.ganho_estimado_cents ?? calcGanhoEstimado() ?? 0) >= 0 ? "text-emerald-600" : "text-red-600"}`}>
+                        {formatCents(precatory.ganho_estimado_cents ?? calcGanhoEstimado())}
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-500 uppercase tracking-wide">Ganho Atualizado</span>
-                      <span className={`text-base font-bold ${(calcGanhoAtualizado() ?? 0) >= 0 ? "text-purple-600" : "text-red-600"}`}>
-                        {formatCents(calcGanhoAtualizado())}
+                      <span className={`text-base font-bold ${(precatory.ganho_atualizado_cents ?? calcGanhoAtualizado() ?? 0) >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                        {formatCents(precatory.ganho_atualizado_cents ?? calcGanhoAtualizado())}
                       </span>
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-500 uppercase tracking-wide">Rent. Estimada</span>
-                      <span className="text-base font-bold text-emerald-700">
-                        {calcRentabilidadeEstimada() != null ? `${calcRentabilidadeEstimada()!.toFixed(2)}%` : "—"}
-                      </span>
+                      {(() => {
+                        const raw = precatory.rentabilidade_estimada ?? calcRentabilidadeEstimada()
+                        const val = raw != null ? Number(raw) : null
+                        return (
+                          <span className={`text-base font-bold ${val != null && val >= 0 ? "text-emerald-700" : "text-red-600"}`}>
+                            {val != null && !isNaN(val) ? `${val.toFixed(2)}%` : "—"}
+                          </span>
+                        )
+                      })()}
                     </div>
                     <div className="flex flex-col gap-0.5">
                       <span className="text-xs text-gray-500 uppercase tracking-wide">Rent. Atualizada</span>
-                      <span className="text-base font-bold text-purple-700">
-                        {calcRentabilidadeAtualizada() != null ? `${calcRentabilidadeAtualizada()!.toFixed(2)}%` : "—"}
-                      </span>
+                      {(() => {
+                        const raw = precatory.rentabilidade_atualizada ?? calcRentabilidadeAtualizada()
+                        const val = raw != null ? Number(raw) : null
+                        return (
+                          <span className={`text-base font-bold ${val != null && val >= 0 ? "text-purple-700" : "text-red-600"}`}>
+                            {val != null && !isNaN(val) ? `${val.toFixed(2)}%` : "—"}
+                          </span>
+                        )
+                      })()}
                     </div>
                   </div>
+                  {precatory.data_atualizacao && (
+                    <div className="mt-3">
+                      <InfoRow label="Data de Atualização dos Valores" value={formatDate(precatory.data_atualizacao)} />
+                    </div>
+                  )}
                   {precatory.percentage_of_face_value != null && (
                     <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-6">
                       <div className="flex flex-col gap-0.5">
@@ -670,6 +702,21 @@ export default function PrecatoryShowPage() {
           />
         </DialogContent>
       </Dialog>
+
+      <AttachmentsPanel
+        precatoryId={Number(id)}
+        precatoryName={precatory.name}
+        open={attachmentsOpen}
+        onClose={() => setAttachmentsOpen(false)}
+      />
+
+      <ModalCotacao
+        precatoryId={Number(id)}
+        precatoryName={precatory.name}
+        paymentForecastYear={precatory.payment_forecast_year ?? null}
+        open={cotacaoOpen}
+        onClose={() => setCotacaoOpen(false)}
+      />
     </>
   )
 }
